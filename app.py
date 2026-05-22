@@ -208,12 +208,12 @@ def build_company_docs_html(server_base_url: str) -> str:
       <td style="padding:22px 36px 0;text-align:center;">
         <a href="{company_docs_zip_url}"
            style="display:inline-block;background:#ffffff;color:#003389;
-                  text-decoration:none;font-size:13px;font-weight:700;
-                  padding:12px 32px;border-radius:8px;
+                  text-decoration:none;font-size:15px;font-weight:700;
+                  padding:14px 36px;border-radius:8px;
                   border:1.5px solid #003389;letter-spacing:0.1px;">
           &#9660;&nbsp; 회사 기본서류 다운로드
         </a>
-        <p style="font-size:11px;color:#666;margin:12px 0 0;line-height:1.7;">
+        <p style="font-size:13px;color:#666;margin:12px 0 0;line-height:1.7;">
           국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외<br>
           <span style="color:#888;">홈페이지 최신본 자동 제공</span>
         </p>
@@ -223,7 +223,7 @@ def build_company_docs_html(server_base_url: str) -> str:
 
 def send_email(to_email: str, product_names: list[str], download_url: str):
     product_list_html = "".join(
-        f"""<tr><td style="padding:4px 0;color:#1a1a1a;font-size:14px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {name}</td></tr>"""
+        f"""<tr><td style="padding:5px 0;color:#1a1a1a;font-size:16px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {name}</td></tr>"""
         for name in product_names
     )
 
@@ -241,23 +241,23 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
     <tr>
       <td align="center">
 
-        <table width="560" cellpadding="0" cellspacing="0"
+        <table width="680" cellpadding="0" cellspacing="0"
                style="background:#ffffff;border-radius:16px;overflow:hidden;
                       box-shadow:0 4px 24px rgba(0,0,0,0.09);">
 
           <!-- 로고 -->
           <tr>
-            <td style="padding:26px 36px 22px;background:#ffffff;">
+            <td style="padding:28px 36px 24px;background:#ffffff;">
               <img src="https://ssangkom.co.kr/img/hd_logo_on.png"
-                   alt="쌍곰" width="96" height="auto" style="display:block;">
+                   alt="쌍곰" width="192" height="auto" style="display:block;">
             </td>
           </tr>
 
           <!-- 헤더 -->
           <tr>
-            <td style="background:#003389;padding:22px 36px 24px;">
-              <p style="color:#ffffff;font-size:20px;font-weight:700;
-                         margin:0;line-height:1.4;letter-spacing:-0.2px;">
+            <td style="background:#003389;padding:24px 36px 26px;">
+              <p style="color:#ffffff;font-size:24px;font-weight:700;
+                         margin:0;line-height:1.4;letter-spacing:-0.3px;">
                 기술자료 이메일 송부
               </p>
             </td>
@@ -265,8 +265,8 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
 
           <!-- 인사말 -->
           <tr>
-            <td style="padding:24px 36px 0;">
-              <p style="color:#333;font-size:14px;line-height:1.95;margin:0;">
+            <td style="padding:28px 36px 0;">
+              <p style="color:#333;font-size:16px;line-height:1.95;margin:0;">
                 안녕하세요.<br>
                 요청하신 품목별 승인서류의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>
                 아래 버튼을 클릭하시면 파일을 즉시 다운로드하실 수 있습니다.
@@ -276,13 +276,13 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
 
           <!-- 품목 카드 -->
           <tr>
-            <td style="padding:16px 36px 0;">
+            <td style="padding:20px 36px 0;">
               <table width="100%" cellpadding="0" cellspacing="0"
                      style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
                 <tr>
-                  <td style="padding:16px 20px 18px;">
-                    <p style="font-size:10px;color:#003389;font-weight:700;
-                               letter-spacing:1.8px;margin:0 0 10px;text-transform:uppercase;">
+                  <td style="padding:18px 22px 20px;">
+                    <p style="font-size:12px;color:#003389;font-weight:700;
+                               letter-spacing:1.8px;margin:0 0 12px;text-transform:uppercase;">
                       포함된 품목
                     </p>
                     <table width="100%" cellpadding="0" cellspacing="0">
@@ -296,15 +296,15 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
 
           <!-- 메인 CTA -->
           <tr>
-            <td style="padding:20px 36px 6px;text-align:center;">
+            <td style="padding:24px 36px 8px;text-align:center;">
               <a href="{download_url}"
                  style="display:inline-block;background:#003389;color:#ffffff;
-                        text-decoration:none;font-size:15px;font-weight:700;
-                        padding:15px 44px;border-radius:8px;letter-spacing:0.1px;
+                        text-decoration:none;font-size:17px;font-weight:700;
+                        padding:17px 52px;border-radius:8px;letter-spacing:0.1px;
                         box-shadow:0 4px 14px rgba(0,51,137,0.28);">
                 &#9660;&nbsp; 승인서류 다운로드
               </a>
-              <p style="margin:12px 0 0;font-size:11px;color:#666;text-align:center;">
+              <p style="margin:12px 0 0;font-size:13px;color:#666;text-align:center;">
                 ※ 링크 유효기간: 발송 후 24시간
               </p>
             </td>
@@ -318,7 +318,7 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="border-top:1px solid #ebebeb;padding-top:20px;">
-                    <p style="color:#666;font-size:11px;line-height:2;margin:0;">
+                    <p style="color:#666;font-size:13px;line-height:2;margin:0;">
                       ※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>
                       ※ 문의사항은 담당 영업사원 또는 대표번호로 연락 바랍니다.
                     </p>
