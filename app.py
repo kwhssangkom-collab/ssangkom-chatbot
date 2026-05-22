@@ -340,7 +340,7 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
     msg = MIMEMultipart("alternative")
     msg["From"] = f"{COMPANY_NAME} <{GMAIL_USER}>"
     msg["To"] = to_email
-    msg["Subject"] = f"[{COMPANY_NAME}] 품목별 승인서류 다운로드 링크"
+    msg["Subject"] = f"[{COMPANY_NAME}] 기술자료 이메일 송부"
     msg.attach(MIMEText(html, "html", "utf-8"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
