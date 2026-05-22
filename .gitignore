@@ -1,0 +1,5 @@
+.env
+temp_zips/
+__pycache__/
+*.pyc
+raw_items.json
