@@ -17,6 +17,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import requests
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_file
 
@@ -40,6 +41,71 @@ with open("document_map.json", encoding="utf-8") as f:
     DOCUMENT_MAP: dict = json.load(f)
 
 PRODUCT_NAMES = list(DOCUMENT_MAP.keys())
+
+# ── 회사 기본 서류 실시간 수집 ────────────────────────
+COMPANY_DOCS_URL = "https://ssangkom.co.kr/description/documents.php?gubun=2"
+SSANGKOM_BASE = "https://ssangkom.co.kr"
+
+def fetch_company_docs() -> list[dict]:
+    """
+    회사 기본서류 페이지에서 실시간으로 파일 목록 수집
+    (국세/지방세납세증명서, 사업자등록증, 공장등록증 등)
+    파일 수정 시 URL이 바뀌므로 항상 최신본 제공
+    """
+    try:
+        resp = requests.get(COMPANY_DOCS_URL, headers=HEADERS, timeout=10)
+        resp.encoding = "utf-8"
+        soup = BeautifulSoup(resp.text, "html.parser")
+        docs = []
+
+        # PDF 파일 (<a> 태그)
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "/data/document" not in href:
+                continue
+            url = SSANGKOM_BASE + href if not href.startswith("http") else href
+            # 라벨: 부모 태그 텍스트에서 추출
+            label = ""
+            p = a.parent
+            for _ in range(8):
+                parts = [
+                    x.strip() for x in
+                    p.get_text(separator="|", strip=True).split("|")
+                    if x.strip() and x.strip() != "pdf 파일입니다."
+                ]
+                if parts:
+                    label = parts[0]
+                    break
+                p = p.parent
+            ext = "PDF"
+            docs.append({"label": label or "서류", "url": url, "ext": ext})
+
+        # 이미지 파일 (<img> 태그) - 사업자등록증, 공장등록증, 납품실적서
+        for img in soup.find_all("img"):
+            src = img.get("src", "")
+            if "/data/document" not in src:
+                continue
+            url = SSANGKOM_BASE + src if not src.startswith("http") else src
+            # 부모에서 라벨 추출
+            label = ""
+            p = img.parent
+            for _ in range(8):
+                parts = [
+                    x.strip() for x in
+                    p.get_text(separator="|", strip=True).split("|")
+                    if x.strip()
+                ]
+                if parts:
+                    label = parts[0]
+                    break
+                p = p.parent
+            ext = "JPG"
+            docs.append({"label": label or "서류", "url": url, "ext": ext})
+
+        return docs
+    except Exception as e:
+        print(f"회사서류 수집 실패: {e}")
+        return []
 
 # ── 임시 링크 만료 관리 ───────────────────────────────
 expiry_map: dict = {}  # {file_id: datetime}
@@ -125,58 +191,112 @@ def _cleanup(path: str, file_id: str):
 # 이메일 발송
 # ═══════════════════════════════════════════════════
 
+def build_company_docs_html(docs: list[dict]) -> str:
+    """회사 기본서류 버튼 HTML 생성"""
+    if not docs:
+        return ""
+    buttons = ""
+    for doc in docs:
+        icon = "📄" if doc["ext"] == "PDF" else "🖼"
+        buttons += f"""
+        <a href="{doc['url']}"
+           style="display:inline-block; margin:5px; padding:10px 18px;
+                  background:#f0f4ff; color:#1a3a6b; text-decoration:none;
+                  font-size:13px; font-weight:600; border-radius:6px;
+                  border:1px solid #c7d5f0;">
+          {icon} {doc['label']}
+        </a>"""
+    return f"""
+    <!-- 회사 기본 서류 -->
+    <tr>
+      <td style="padding:0 40px 28px;">
+        <div style="border-top:1px solid #eee; padding-top:24px;">
+          <p style="font-size:13px; font-weight:700; color:#555; margin:0 0 12px;">
+            &#128196; 회사 기본서류
+          </p>
+          <p style="font-size:12px; color:#999; margin:0 0 12px;">
+            아래 서류는 홈페이지 최신본으로 자동 제공됩니다.
+          </p>
+          <div style="line-height:2;">{buttons}
+          </div>
+        </div>
+      </td>
+    </tr>"""
+
+
 def send_email(to_email: str, product_names: list[str], download_url: str):
     product_list_html = "".join(
         f"<li style='padding:4px 0; color:#444;'>{name}</li>"
         for name in product_names
     )
 
+    # 회사 기본서류 실시간 수집
+    company_docs = fetch_company_docs()
+    company_docs_html = build_company_docs_html(company_docs)
+
     html = f"""<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f4f6f9;font-family:'Malgun Gothic',Arial,sans-serif;">
-  <table width="600" align="center" cellpadding="0" cellspacing="0"
-         style="background:#fff;margin:30px auto;border-radius:8px;overflow:hidden;
-                box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+  <table width="620" align="center" cellpadding="0" cellspacing="0"
+         style="background:#fff;margin:30px auto;border-radius:10px;overflow:hidden;
+                box-shadow:0 2px 16px rgba(0,0,0,0.10);">
 
     <!-- 헤더 -->
     <tr>
-      <td style="background:#1a3a6b;padding:28px 40px;text-align:center;">
+      <td style="background:linear-gradient(135deg,#1a3a6b,#2563c0);padding:32px 40px;text-align:center;">
+        <p style="color:rgba(255,255,255,0.8);font-size:12px;margin:0 0 6px;letter-spacing:2px;">
+          SSANGKOM
+        </p>
         <p style="color:white;font-size:20px;font-weight:bold;margin:0;">
-          {COMPANY_NAME} 품목별 승인서류 송부
+          품목별 승인서류 송부
         </p>
       </td>
     </tr>
 
     <!-- 본문 -->
     <tr>
-      <td style="padding:36px 40px;">
-        <p style="color:#333;font-size:15px;line-height:1.8;margin:0 0 20px;">
+      <td style="padding:36px 40px 24px;">
+        <p style="color:#333;font-size:15px;line-height:1.8;margin:0 0 24px;">
           안녕하세요.<br>
           요청하신 품목별 승인서류의 다운로드 링크를 아래와 같이 송부하오니<br>
           아래 버튼을 클릭하여 다운로드 받으시기 바랍니다.
         </p>
 
         <!-- 품목 목록 -->
-        <div style="background:#f8f9fc;border-radius:6px;padding:16px 20px;margin-bottom:28px;">
-          <p style="font-size:13px;color:#888;margin:0 0 8px;font-weight:bold;">포함된 품목</p>
+        <div style="background:#f8f9fc;border-radius:8px;padding:16px 20px;margin-bottom:28px;
+                    border-left:4px solid #1a3a6b;">
+          <p style="font-size:12px;color:#888;margin:0 0 8px;font-weight:bold;letter-spacing:1px;">
+            포함된 품목
+          </p>
           <ul style="margin:0;padding-left:18px;">
             {product_list_html}
           </ul>
         </div>
 
-        <!-- 다운로드 버튼 -->
+        <!-- 승인서류 다운로드 버튼 -->
         <div style="text-align:center;margin:28px 0;">
           <a href="{download_url}"
              style="display:inline-block;background:#1a3a6b;color:white;
-                    padding:16px 48px;text-decoration:none;font-size:15px;
-                    font-weight:bold;border-radius:6px;letter-spacing:0.5px;">
-            &#x25BC;&nbsp; 승인서류 다운로드
+                    padding:16px 52px;text-decoration:none;font-size:15px;
+                    font-weight:bold;border-radius:8px;letter-spacing:0.5px;
+                    box-shadow:0 4px 12px rgba(26,58,107,0.3);">
+            &#x25BC;&nbsp;&nbsp;승인서류 다운로드
           </a>
+          <p style="color:#999;font-size:11px;margin:10px 0 0;">
+            ※ 링크 유효기간: 발송 후 24시간
+          </p>
         </div>
+      </td>
+    </tr>
 
-        <p style="color:#999;font-size:12px;line-height:1.7;margin:0;">
-          ※ 링크 유효기간: 발송 후 24시간<br>
+    {company_docs_html}
+
+    <!-- 안내 -->
+    <tr>
+      <td style="padding:0 40px 28px;">
+        <p style="color:#bbb;font-size:11px;line-height:1.8;margin:0;
+                  border-top:1px solid #f0f0f0;padding-top:20px;">
           ※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>
           ※ 문의사항은 카카오톡 채널 또는 대표번호로 연락 바랍니다.
         </p>
@@ -185,7 +305,7 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
 
     <!-- 푸터 -->
     <tr>
-      <td style="background:#f0f2f5;padding:18px 40px;text-align:center;">
+      <td style="background:#f0f2f5;padding:16px 40px;text-align:center;">
         <p style="color:#aaa;font-size:12px;margin:0;">{COMPANY_NAME}</p>
       </td>
     </tr>
@@ -354,7 +474,7 @@ def webhook():
             try:
                 download_url = create_zip(products)
                 send_email(email, products, download_url)
-                print(f"[완료] {email} → {products}")
+                print(f"[완료] {email} -> {products}")
             except Exception as e:
                 print(f"[오류] {e}")
 
