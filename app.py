@@ -34,7 +34,14 @@ SERVER_BASE_URL = os.getenv("SERVER_BASE_URL", "http://localhost:5000")
 TEMP_DIR = os.path.join(os.getenv("TMPDIR", "/tmp"), "ssangkom_zips")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+}
 
 # ── 품목 매핑 로드 ────────────────────────────────────
 with open("document_map.json", encoding="utf-8") as f:
@@ -48,64 +55,81 @@ SSANGKOM_BASE = "https://ssangkom.co.kr"
 
 def fetch_company_docs() -> list[dict]:
     """
-    회사 기본서류 페이지에서 실시간으로 파일 목록 수집
-    (국세/지방세납세증명서, 사업자등록증, 공장등록증 등)
-    파일 수정 시 URL이 바뀌므로 항상 최신본 제공
+    회사 기본서류 페이지에서 실시간으로 파일 목록 수집.
+    세션 쿠키를 유지해 클라우드 IP 차단 우회.
     """
-    try:
-        resp = requests.get(COMPANY_DOCS_URL, headers=HEADERS, timeout=10)
-        resp.encoding = "utf-8"
-        soup = BeautifulSoup(resp.text, "html.parser")
-        docs = []
+    session = requests.Session()
+    session.headers.update(HEADERS)
 
-        # PDF 파일 (<a> 태그)
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            if "/data/document" not in href:
+    for attempt in range(3):
+        try:
+            # 메인 페이지 먼저 방문 → 쿠키 획득
+            session.get(SSANGKOM_BASE, timeout=10)
+
+            resp = session.get(
+                COMPANY_DOCS_URL,
+                headers={"Referer": SSANGKOM_BASE + "/"},
+                timeout=15,
+            )
+            resp.encoding = "utf-8"
+
+            if resp.status_code != 200:
+                print(f"회사서류 페이지 응답 {resp.status_code} (시도 {attempt+1})")
                 continue
-            url = SSANGKOM_BASE + href if not href.startswith("http") else href
-            # 라벨: 부모 태그 텍스트에서 추출
-            label = ""
-            p = a.parent
-            for _ in range(8):
-                parts = [
-                    x.strip() for x in
-                    p.get_text(separator="|", strip=True).split("|")
-                    if x.strip() and x.strip() != "pdf 파일입니다."
-                ]
-                if parts:
-                    label = parts[0]
-                    break
-                p = p.parent
-            ext = "PDF"
-            docs.append({"label": label or "서류", "url": url, "ext": ext})
 
-        # 이미지 파일 (<img> 태그) - 사업자등록증, 공장등록증, 납품실적서
-        for img in soup.find_all("img"):
-            src = img.get("src", "")
-            if "/data/document" not in src:
-                continue
-            url = SSANGKOM_BASE + src if not src.startswith("http") else src
-            # 부모에서 라벨 추출
-            label = ""
-            p = img.parent
-            for _ in range(8):
-                parts = [
-                    x.strip() for x in
-                    p.get_text(separator="|", strip=True).split("|")
-                    if x.strip()
-                ]
-                if parts:
-                    label = parts[0]
-                    break
-                p = p.parent
-            ext = "JPG"
-            docs.append({"label": label or "서류", "url": url, "ext": ext})
+            soup = BeautifulSoup(resp.text, "html.parser")
+            docs = []
 
-        return docs
-    except Exception as e:
-        print(f"회사서류 수집 실패: {e}")
-        return []
+            # PDF 파일 (<a> 태그)
+            for a in soup.find_all("a", href=True):
+                href = a["href"]
+                if "/data/document" not in href:
+                    continue
+                url = SSANGKOM_BASE + href if not href.startswith("http") else href
+                label = ""
+                p = a.parent
+                for _ in range(8):
+                    parts = [
+                        x.strip() for x in
+                        p.get_text(separator="|", strip=True).split("|")
+                        if x.strip() and x.strip() != "pdf 파일입니다."
+                    ]
+                    if parts:
+                        label = parts[0]
+                        break
+                    p = p.parent
+                docs.append({"label": label or "서류", "url": url, "ext": "PDF"})
+
+            # 이미지 파일 (<img> 태그) - 사업자등록증, 공장등록증 등
+            for img in soup.find_all("img"):
+                src = img.get("src", "")
+                if "/data/document" not in src:
+                    continue
+                url = SSANGKOM_BASE + src if not src.startswith("http") else src
+                label = ""
+                p = img.parent
+                for _ in range(8):
+                    parts = [
+                        x.strip() for x in
+                        p.get_text(separator="|", strip=True).split("|")
+                        if x.strip()
+                    ]
+                    if parts:
+                        label = parts[0]
+                        break
+                    p = p.parent
+                docs.append({"label": label or "서류", "url": url, "ext": "JPG"})
+
+            if docs:
+                print(f"회사서류 {len(docs)}개 수집 완료")
+                return docs
+
+            print(f"회사서류 0개 수집 (시도 {attempt+1}), HTML 길이: {len(resp.text)}")
+
+        except Exception as e:
+            print(f"회사서류 수집 오류 (시도 {attempt+1}): {e}")
+
+    return []
 
 # ── 임시 링크 만료 관리 ───────────────────────────────
 expiry_map: dict = {}  # {file_id: datetime}
