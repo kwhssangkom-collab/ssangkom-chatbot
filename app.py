@@ -624,6 +624,32 @@ def index():
     """
 
 
+@app.route("/debug-company-docs")
+def debug_company_docs():
+    """회사서류 스크래핑 진단용 (운영 확인 후 제거)"""
+    import traceback
+    result = {}
+    try:
+        session = requests.Session()
+        session.headers.update(HEADERS)
+        r1 = session.get(SSANGKOM_BASE, timeout=10)
+        result["main_status"] = r1.status_code
+        result["main_html_len"] = len(r1.text)
+        r2 = session.get(COMPANY_DOCS_URL, headers={"Referer": SSANGKOM_BASE + "/"}, timeout=15)
+        result["docs_status"] = r2.status_code
+        result["docs_html_len"] = len(r2.text)
+        result["docs_html_head"] = r2.text[:600]
+        from bs4 import BeautifulSoup as _BS
+        soup = _BS(r2.text, "html.parser")
+        hrefs = [a["href"] for a in soup.find_all("a", href=True) if "/data/document" in a.get("href","")]
+        imgs = [img["src"] for img in soup.find_all("img") if "/data/document" in img.get("src","")]
+        result["doc_hrefs"] = hrefs
+        result["doc_imgs"] = imgs
+    except Exception:
+        result["error"] = traceback.format_exc()
+    return jsonify(result)
+
+
 @app.route("/health")
 def health():
     return jsonify({
