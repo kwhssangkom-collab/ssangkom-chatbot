@@ -1,0 +1,41 @@
+name: 회사기본서류 자동 갱신
+
+on:
+  schedule:
+    # 매주 월요일 오전 9시 (KST = UTC+9, 즉 UTC 00:00)
+    - cron: '0 0 * * 1'
+  workflow_dispatch:  # 수동 실행 버튼
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 레포 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: pip install requests beautifulsoup4
+
+      - name: 회사기본서류 다운로드
+        run: python refresh_company_docs.py
+
+      - name: 변경 사항 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add company-docs/
+          if git diff --cached --quiet; then
+            echo "파일 변경 없음 - 커밋 스킵"
+          else
+            git commit -m "chore: 회사 기본서류 자동 갱신 [$(date '+%Y-%m-%d')]"
+            git push
+            echo "변경된 파일 push 완료"
+          fi
