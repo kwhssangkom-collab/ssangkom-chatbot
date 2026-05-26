@@ -49,87 +49,25 @@ with open("document_map.json", encoding="utf-8") as f:
 
 PRODUCT_NAMES = list(DOCUMENT_MAP.keys())
 
-# ── 회사 기본 서류 실시간 수집 ────────────────────────
-COMPANY_DOCS_URL = "https://ssangkom.co.kr/description/documents.php?gubun=2"
+# ── 회사 기본서류 ────────────────────────────────────
 SSANGKOM_BASE = "https://ssangkom.co.kr"
 
+_GITHUB_RAW = "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/company-docs"
+
+# ssangkom.co.kr은 클라우드 IP에 JS 챌린지를 적용하므로 직접 스크래핑 불가.
+# 회사 기본서류를 GitHub 레포에 보관하고 Raw URL로 서빙.
+# 파일 갱신 시: python refresh_company_docs.py 실행 후 git push.
+COMPANY_DOCS_LIST = [
+    {"label": "국세/지방세납세증명서", "url": f"{_GITHUB_RAW}/tax_certificate.pdf",       "ext": "pdf"},
+    {"label": "품질경영시스템인증서",   "url": f"{_GITHUB_RAW}/quality_certification.pdf", "ext": "pdf"},
+    {"label": "사업자등록증",           "url": f"{_GITHUB_RAW}/business_registration.jpg", "ext": "jpg"},
+    {"label": "공장등록증",             "url": f"{_GITHUB_RAW}/factory_registration.jpg",  "ext": "jpg"},
+    {"label": "납품실적서",             "url": f"{_GITHUB_RAW}/delivery_record.jpg",        "ext": "jpg"},
+]
+
+
 def fetch_company_docs() -> list[dict]:
-    """
-    회사 기본서류 페이지에서 실시간으로 파일 목록 수집.
-    세션 쿠키를 유지해 클라우드 IP 차단 우회.
-    """
-    session = requests.Session()
-    session.headers.update(HEADERS)
-
-    for attempt in range(3):
-        try:
-            # 메인 페이지 먼저 방문 → 쿠키 획득
-            session.get(SSANGKOM_BASE, timeout=10)
-
-            resp = session.get(
-                COMPANY_DOCS_URL,
-                headers={"Referer": SSANGKOM_BASE + "/"},
-                timeout=15,
-            )
-            resp.encoding = "utf-8"
-
-            if resp.status_code != 200:
-                print(f"회사서류 페이지 응답 {resp.status_code} (시도 {attempt+1})")
-                continue
-
-            soup = BeautifulSoup(resp.text, "html.parser")
-            docs = []
-
-            # PDF 파일 (<a> 태그)
-            for a in soup.find_all("a", href=True):
-                href = a["href"]
-                if "/data/document" not in href:
-                    continue
-                url = SSANGKOM_BASE + href if not href.startswith("http") else href
-                label = ""
-                p = a.parent
-                for _ in range(8):
-                    parts = [
-                        x.strip() for x in
-                        p.get_text(separator="|", strip=True).split("|")
-                        if x.strip() and x.strip() != "pdf 파일입니다."
-                    ]
-                    if parts:
-                        label = parts[0]
-                        break
-                    p = p.parent
-                docs.append({"label": label or "서류", "url": url, "ext": "PDF"})
-
-            # 이미지 파일 (<img> 태그) - 사업자등록증, 공장등록증 등
-            for img in soup.find_all("img"):
-                src = img.get("src", "")
-                if "/data/document" not in src:
-                    continue
-                url = SSANGKOM_BASE + src if not src.startswith("http") else src
-                label = ""
-                p = img.parent
-                for _ in range(8):
-                    parts = [
-                        x.strip() for x in
-                        p.get_text(separator="|", strip=True).split("|")
-                        if x.strip()
-                    ]
-                    if parts:
-                        label = parts[0]
-                        break
-                    p = p.parent
-                docs.append({"label": label or "서류", "url": url, "ext": "JPG"})
-
-            if docs:
-                print(f"회사서류 {len(docs)}개 수집 완료")
-                return docs
-
-            print(f"회사서류 0개 수집 (시도 {attempt+1}), HTML 길이: {len(resp.text)}")
-
-        except Exception as e:
-            print(f"회사서류 수집 오류 (시도 {attempt+1}): {e}")
-
-    return []
+    return COMPANY_DOCS_LIST
 
 # ── 임시 링크 만료 관리 ───────────────────────────────
 expiry_map: dict = {}  # {file_id: datetime}
@@ -623,31 +561,6 @@ def index():
     </body></html>
     """
 
-
-@app.route("/debug-company-docs")
-def debug_company_docs():
-    """회사서류 스크래핑 진단용 (운영 확인 후 제거)"""
-    import traceback
-    result = {}
-    try:
-        session = requests.Session()
-        session.headers.update(HEADERS)
-        r1 = session.get(SSANGKOM_BASE, timeout=10)
-        result["main_status"] = r1.status_code
-        result["main_html_len"] = len(r1.text)
-        r2 = session.get(COMPANY_DOCS_URL, headers={"Referer": SSANGKOM_BASE + "/"}, timeout=15)
-        result["docs_status"] = r2.status_code
-        result["docs_html_len"] = len(r2.text)
-        result["docs_html_head"] = r2.text[:600]
-        from bs4 import BeautifulSoup as _BS
-        soup = _BS(r2.text, "html.parser")
-        hrefs = [a["href"] for a in soup.find_all("a", href=True) if "/data/document" in a.get("href","")]
-        imgs = [img["src"] for img in soup.find_all("img") if "/data/document" in img.get("src","")]
-        result["doc_hrefs"] = hrefs
-        result["doc_imgs"] = imgs
-    except Exception:
-        result["error"] = traceback.format_exc()
-    return jsonify(result)
 
 
 @app.route("/health")
