@@ -183,6 +183,14 @@ def build_company_docs_html(server_base_url: str) -> str:
     </tr>"""
 
 
+def _smtp_ssl_ipv4(host: str, port: int, timeout: int = 15) -> smtplib.SMTP_SSL:
+    """Render 등 IPv6 미지원 환경에서 IPv4 강제 연결"""
+    import socket, ssl
+    ipv4 = socket.getaddrinfo(host, port, socket.AF_INET)[0][4][0]
+    ctx = ssl.create_default_context()
+    return smtplib.SMTP_SSL(ipv4, port, timeout=timeout, context=ctx)
+
+
 def send_email(to_email: str, product_names: list[str], download_url: str):
     product_list_html = "".join(
         f"""<tr><td style="padding:5px 0;color:#1a1a1a;font-size:16px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {name}</td></tr>"""
@@ -305,7 +313,7 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
     msg["Subject"] = f"[{COMPANY_NAME}] 기술자료 이메일 송부"
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    with _smtp_ssl_ipv4("smtp.gmail.com", 465) as server:
         server.login(GMAIL_USER, GMAIL_PASSWORD)
         server.sendmail(GMAIL_USER, to_email, msg.as_string())
 
@@ -580,7 +588,7 @@ def test_email():
     def run():
         # 465 SSL
         try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=8) as s:
+            with _smtp_ssl_ipv4("smtp.gmail.com", 465, timeout=8) as s:
                 s.login(GMAIL_USER, GMAIL_PASSWORD)
                 results["smtp_465"] = "login_ok"
                 msg = MIMEMultipart("alternative")
@@ -595,7 +603,9 @@ def test_email():
             results["smtp_465"] = str(e)
             # 587 STARTTLS 시도
             try:
-                with smtplib.SMTP("smtp.gmail.com", 587, timeout=8) as s:
+                import socket as _sock
+                ipv4_587 = _sock.getaddrinfo("smtp.gmail.com", 587, _sock.AF_INET)[0][4][0]
+                with smtplib.SMTP(ipv4_587, 587, timeout=8) as s:
                     s.starttls()
                     s.login(GMAIL_USER, GMAIL_PASSWORD)
                     results["smtp_587"] = "login_ok"
