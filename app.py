@@ -565,45 +565,60 @@ def index():
 
 @app.route("/test-email")
 def test_email():
-    """SMTP 진단 엔드포인트"""
-    result = {
+    """SMTP 진단 - 백그라운드 스레드로 실행해 gunicorn 타임아웃 회피"""
+    results = {
         "gmail_user": GMAIL_USER,
+        "pw_set": bool(GMAIL_PASSWORD),
         "pw_len": len(GMAIL_PASSWORD) if GMAIL_PASSWORD else 0,
-        "smtp_465": None,
-        "smtp_587": None,
-        "send": None,
+        "smtp_465": "pending",
+        "smtp_587": "pending",
+        "send": "pending",
     }
-    # 포트 465 (SSL)
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as s:
-            s.login(GMAIL_USER, GMAIL_PASSWORD)
-            result["smtp_465"] = "login_ok"
-            msg = MIMEMultipart("alternative")
-            msg["From"] = f"{COMPANY_NAME} <{GMAIL_USER}>"
-            msg["To"] = GMAIL_USER
-            msg["Subject"] = "[쌍곰] Render 발송 테스트"
-            msg.attach(MIMEText("<p>Render 서버 테스트 메일입니다.</p>", "html", "utf-8"))
-            s.sendmail(GMAIL_USER, GMAIL_USER, msg.as_string())
-            result["send"] = "ok"
-    except Exception as e:
-        result["smtp_465"] = str(e)
-    # 포트 465 실패 시 포트 587 (STARTTLS) 시도
-    if result["send"] != "ok":
+
+    done = threading.Event()
+
+    def run():
+        # 465 SSL
         try:
-            with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as s:
-                s.starttls()
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=8) as s:
                 s.login(GMAIL_USER, GMAIL_PASSWORD)
-                result["smtp_587"] = "login_ok"
+                results["smtp_465"] = "login_ok"
                 msg = MIMEMultipart("alternative")
                 msg["From"] = f"{COMPANY_NAME} <{GMAIL_USER}>"
                 msg["To"] = GMAIL_USER
-                msg["Subject"] = "[쌍곰] Render 발송 테스트 (587)"
-                msg.attach(MIMEText("<p>Render 서버 테스트 메일입니다 (587포트).</p>", "html", "utf-8"))
+                msg["Subject"] = "[쌍곰] Render 발송 테스트"
+                msg.attach(MIMEText("<p>Render 서버 테스트 메일입니다.</p>", "html", "utf-8"))
                 s.sendmail(GMAIL_USER, GMAIL_USER, msg.as_string())
-                result["send"] = "ok_587"
+                results["send"] = "ok_465"
+                results["smtp_587"] = "skipped"
         except Exception as e:
-            result["smtp_587"] = str(e)
-    return jsonify(result)
+            results["smtp_465"] = str(e)
+            # 587 STARTTLS 시도
+            try:
+                with smtplib.SMTP("smtp.gmail.com", 587, timeout=8) as s:
+                    s.starttls()
+                    s.login(GMAIL_USER, GMAIL_PASSWORD)
+                    results["smtp_587"] = "login_ok"
+                    msg = MIMEMultipart("alternative")
+                    msg["From"] = f"{COMPANY_NAME} <{GMAIL_USER}>"
+                    msg["To"] = GMAIL_USER
+                    msg["Subject"] = "[쌍곰] Render 발송 테스트 (587)"
+                    msg.attach(MIMEText("<p>Render 서버 테스트 메일입니다 (587).</p>", "html", "utf-8"))
+                    s.sendmail(GMAIL_USER, GMAIL_USER, msg.as_string())
+                    results["send"] = "ok_587"
+            except Exception as e2:
+                results["smtp_587"] = str(e2)
+                results["send"] = "failed"
+        done.set()
+
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    done.wait(timeout=25)
+    if not done.is_set():
+        results["smtp_465"] = "timeout_25s"
+        results["smtp_587"] = "timeout_25s"
+        results["send"] = "timeout"
+    return jsonify(results)
 
 
 @app.route("/health")
