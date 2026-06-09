@@ -563,6 +563,24 @@ def index():
 
 
 
+@app.route("/test-email")
+def test_email():
+    """SMTP 연결 및 이메일 발송 단독 테스트"""
+    import traceback
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["From"] = f"{COMPANY_NAME} <{GMAIL_USER}>"
+        msg["To"] = GMAIL_USER
+        msg["Subject"] = "[쌍곰] 서버 이메일 발송 테스트"
+        msg.attach(MIMEText("<p>Render 서버에서 발송된 테스트 메일입니다.</p>", "html", "utf-8"))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(GMAIL_USER, GMAIL_PASSWORD)
+            server.sendmail(GMAIL_USER, GMAIL_USER, msg.as_string())
+        return jsonify({"result": "success", "to": GMAIL_USER})
+    except Exception:
+        return jsonify({"result": "error", "detail": traceback.format_exc()}), 500
+
+
 @app.route("/health")
 def health():
     return jsonify({
