@@ -571,6 +571,34 @@ def index():
 
 
 
+@app.route("/test-smtp-diag")
+def test_smtp_diag():
+    """TCP 수준 SMTP 연결 진단"""
+    import socket, ssl
+    result = {}
+    # DNS 조회
+    try:
+        all_addrs = socket.getaddrinfo("smtp.gmail.com", 465)
+        result["dns_all"] = [str(a[4]) for a in all_addrs]
+        ipv4_addrs = socket.getaddrinfo("smtp.gmail.com", 465, socket.AF_INET)
+        result["dns_ipv4"] = [str(a[4]) for a in ipv4_addrs]
+    except Exception as e:
+        result["dns_error"] = str(e)
+    # 직접 TCP 연결 (465)
+    for port in [465, 587, 25]:
+        key = f"tcp_{port}"
+        try:
+            ip = socket.getaddrinfo("smtp.gmail.com", port, socket.AF_INET)[0][4][0]
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(6)
+            s.connect((ip, port))
+            s.close()
+            result[key] = f"ok (ip={ip})"
+        except Exception as e:
+            result[key] = f"{type(e).__name__}: {e}"
+    return jsonify(result)
+
+
 @app.route("/test-email")
 def test_email():
     """SMTP 진단 - 백그라운드 스레드로 실행해 gunicorn 타임아웃 회피"""
