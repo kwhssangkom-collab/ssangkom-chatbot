@@ -686,6 +686,30 @@ def test_email():
     return jsonify(result)
 
 
+@app.route("/test-zip")
+def test_zip():
+    """첫 번째 품목으로 ZIP 생성 테스트 → 다운로드 URL 반환"""
+    product = PRODUCT_NAMES[0]
+    docs = DOCUMENT_MAP.get(product, [])
+    results = []
+    for doc in docs[:3]:
+        fetch_url = doc.get("github_url") or doc["url"]
+        try:
+            r = requests.get(fetch_url, headers=HEADERS, timeout=20)
+            results.append({
+                "type": doc.get("type"),
+                "fetch_url": fetch_url[:80],
+                "status": r.status_code,
+                "is_pdf": r.content.startswith(b"%PDF"),
+                "filename": doc.get("filename"),
+                "size": len(r.content),
+            })
+        except Exception as e:
+            results.append({"type": doc.get("type"), "error": str(e)})
+    download_url = create_zip([product])
+    return jsonify({"product": product, "download_url": download_url, "docs_checked": results})
+
+
 @app.route("/test-dispatch")
 def test_dispatch():
     """dispatch URL이 실제 PDF를 반환하는지 진단"""
