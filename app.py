@@ -38,6 +38,58 @@ SERVER_BASE_URL = os.getenv("SERVER_BASE_URL", "http://localhost:5000")
 TEMP_DIR = os.path.join(os.getenv("TMPDIR", "/tmp"), "ssangkom_zips")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
+# 이메일 도메인 드롭다운 (자주 쓰는 도메인)
+COMMON_EMAIL_DOMAINS = [
+    "gmail.com", "naver.com", "daum.net", "hanmail.net", "nate.com",
+    "kakao.com", "outlook.com", "hotmail.com", "yahoo.com", "icloud.com",
+]
+
+# DNS MX 조회용 (없으면 도메인 검증은 형식 검사로 degrade)
+try:
+    import dns.resolver as _dns_resolver
+    _DNS_OK = True
+except ImportError:
+    _DNS_OK = False
+
+_mx_cache: dict = {}  # {domain: (valid: bool, reason: str)}
+
+
+def verify_email_domain(email: str):
+    """이메일 도메인이 실제 메일을 받을 수 있는지 MX/A 레코드로 확인.
+    반환: (valid: bool, reason: str). 라이브러리 미설치/네트워크 오류는 통과(오탐 방지)."""
+    domain = email.rsplit("@", 1)[-1].strip().lower()
+    if not domain:
+        return False, "도메인이 비어 있습니다"
+    if not _DNS_OK:
+        return True, ""
+    if domain in _mx_cache:
+        return _mx_cache[domain]
+
+    result = (True, "")
+    try:
+        answers = _dns_resolver.resolve(domain, "MX", lifetime=5)
+        if len(answers) > 0:
+            result = (True, "")
+        else:
+            raise _dns_resolver.NoAnswer
+    except _dns_resolver.NXDOMAIN:
+        result = (False, "존재하지 않는 도메인입니다")
+    except (_dns_resolver.NoAnswer, _dns_resolver.NoNameservers):
+        # MX 없으면 A 레코드라도 있으면 메일 수신 가능 (RFC 5321)
+        try:
+            _dns_resolver.resolve(domain, "A", lifetime=5)
+            result = (True, "")
+        except _dns_resolver.NXDOMAIN:
+            result = (False, "존재하지 않는 도메인입니다")
+        except Exception:
+            result = (False, "메일을 받을 수 없는 도메인입니다")
+    except Exception:
+        # 타임아웃 등 일시적 오류는 통과
+        result = (True, "")
+
+    _mx_cache[domain] = result
+    return result
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -798,6 +850,21 @@ def admin_send_test():
 def request_page():
     products_json    = json.dumps(PRODUCT_NAMES, ensure_ascii=False)
     basic_docs_json  = json.dumps([d["label"] for d in COMPANY_DOCS_LIST], ensure_ascii=False)
+    domain_opts = "".join(f'<option value="{d}">{d}</option>' for d in COMMON_EMAIL_DOMAINS)
+
+    def email_block(n: int) -> str:
+        return (
+            '<div class="email-row">'
+            f'<input type="text" class="email-local" id="emailLocal{n}" placeholder="이메일 아이디" autocomplete="off" oninput="clearEmailStatus({n})">'
+            '<span class="email-at">@</span>'
+            f'<input type="text" class="email-domain" id="emailDomain{n}" placeholder="도메인" autocomplete="off" oninput="clearEmailStatus({n})" onblur="checkEmail({n})">'
+            '</div>'
+            f'<select class="email-select" id="emailSel{n}" onchange="pickDomain({n})">'
+            f'<option value="">자주 쓰는 도메인 선택 / 직접입력</option>{domain_opts}</select>'
+            f'<div class="email-status" id="emailStatus{n}"></div>'
+        )
+
+    email1, email2, email3 = email_block(1), email_block(2), email_block(3)
     html = f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -824,10 +891,17 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .search-wrap input{{width:100%;padding:11px 16px 11px 40px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;font-family:inherit;outline:none;transition:.2s}}
 .search-wrap input:focus{{border-color:#003389}}
 .search-icon{{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#aaa;font-size:16px}}
-.selected-bar{{background:#eef2fb;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px;color:#003389;font-weight:600;min-height:38px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}}
-.selected-bar.empty{{color:#aaa;font-weight:400}}
-.tag{{background:#003389;color:#fff;border-radius:20px;padding:3px 10px;font-size:12px;display:flex;align-items:center;gap:4px}}
-.tag button{{background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1;padding:0}}
+.summary-head{{display:flex;align-items:center;gap:8px;margin-bottom:12px}}
+.summary-head .label{{font-size:13px;font-weight:700;color:#003389;letter-spacing:.5px}}
+.summary-head .spacer{{flex:1}}
+.summary-count{{background:#003389;color:#fff;font-size:12px;font-weight:700;border-radius:20px;min-width:22px;height:22px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center}}
+.summary-count.zero{{background:#c2cbe0}}
+.chips{{display:flex;flex-wrap:wrap;gap:7px;min-height:24px}}
+.chips.empty{{color:#9aa5bf;font-size:13px;align-items:center}}
+.chip{{background:#003389;color:#fff;border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:500;display:inline-flex;align-items:center;gap:6px;line-height:1.35;max-width:100%}}
+.chip span{{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.chip button{{background:rgba(255,255,255,.22);border:none;color:#fff;width:16px;height:16px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}}
+.chip button:hover{{background:rgba(255,255,255,.4)}}
 .product-list{{max-height:280px;overflow-y:auto;border:1.5px solid #dde3ef;border-radius:8px;margin-top:10px}}
 .product-item{{display:flex;align-items:center;padding:11px 14px;border-bottom:1px solid #f0f3f8;cursor:pointer;transition:.15s}}
 .product-item:last-child{{border-bottom:none}}
@@ -838,8 +912,16 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .product-item label{{font-size:15px;color:#1a1a1a;cursor:pointer;line-height:1.4;flex:1}}
 .count-badge{{display:inline-block;background:#003389;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}}
 .no-result{{text-align:center;padding:24px;color:#aaa;font-size:14px}}
-.email-input{{width:100%;padding:12px 16px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;font-family:inherit;outline:none;transition:.2s}}
-.email-input:focus{{border-color:#003389}}
+.email-row{{display:flex;align-items:center;gap:8px}}
+.email-local,.email-domain{{flex:1;min-width:0;padding:12px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;font-family:inherit;outline:none;transition:.2s}}
+.email-at{{color:#888;font-weight:700;flex-shrink:0}}
+.email-local:focus,.email-domain:focus{{border-color:#003389}}
+.email-select{{width:100%;margin-top:8px;padding:11px 12px;border:1.5px solid #dde3ef;border-radius:8px;font-size:14px;font-family:inherit;background:#fff;color:#444;outline:none;cursor:pointer}}
+.email-select:focus{{border-color:#003389}}
+.email-status{{font-size:12.5px;margin-top:8px;min-height:17px;font-weight:500}}
+.email-status.ok{{color:#1a7f37}}
+.email-status.err{{color:#dc2f3a}}
+.email-status.checking{{color:#888}}
 .submit-btn{{width:100%;padding:15px;background:#003389;color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit;transition:.2s}}
 .submit-btn:active{{background:#002270}}
 .submit-btn:disabled{{background:#aaa;cursor:not-allowed}}
@@ -858,7 +940,7 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .doc-item:hover{{background:#f4f7ff}}
 .doc-item.checked{{background:#eef2fb}}
 .doc-item input[type=checkbox]{{width:18px;height:18px;accent-color:#003389;margin-right:12px;flex-shrink:0;cursor:pointer}}
-.doc-item label{{font-size:15px;color:#1a1a1a;line-height:1.4}}
+.doc-item label{{font-size:15px;color:#1a1a1a;line-height:1.4;flex:1}}
 </style>
 </head>
 <body>
@@ -882,17 +964,23 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 <div class="tab-content active" id="content1">
   <div id="main1">
     <div class="section">
+      <div class="summary-head">
+        <span class="label">선택된 품목</span>
+        <span class="summary-count zero" id="count1">0</span>
+      </div>
+      <div class="chips empty" id="chips1">선택된 품목이 없습니다</div>
+    </div>
+    <div class="section">
       <div class="section-title">품목 선택</div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input type="text" id="searchInput1" placeholder="품목명 검색..." oninput="filterProducts1()">
       </div>
-      <div class="selected-bar empty" id="selectedBar1">선택된 품목이 없습니다</div>
       <div class="product-list" id="productList1"></div>
     </div>
     <div class="section">
       <div class="section-title">수신 이메일</div>
-      <input type="email" class="email-input" id="emailInput1" placeholder="example@company.com">
+      {email1}
     </div>
     <div class="section">
       <button class="submit-btn" id="submitBtn1" onclick="submitAll()">기술자료 발송 요청</button>
@@ -909,8 +997,11 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 <div class="tab-content" id="content2">
   <div id="main2">
     <div class="section">
-      <div class="section-title">선택된 서류</div>
-      <div class="selected-bar empty" id="selectedBar2">선택된 서류가 없습니다</div>
+      <div class="summary-head">
+        <span class="label">선택된 서류</span>
+        <span class="summary-count zero" id="count2">0</span>
+      </div>
+      <div class="chips empty" id="chips2">선택된 서류가 없습니다</div>
     </div>
     <div class="section">
       <div class="step-label">① 품목 선택</div>
@@ -927,7 +1018,7 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
     </div>
     <div class="section">
       <div class="section-title">수신 이메일</div>
-      <input type="email" class="email-input" id="emailInput2" placeholder="example@company.com">
+      {email2}
     </div>
     <div class="section">
       <button class="submit-btn" id="submitBtn2" onclick="submitSpecific()">선택 서류 발송 요청</button>
@@ -944,16 +1035,21 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 <div class="tab-content" id="content3">
   <div id="main3">
     <div class="section">
-      <div class="row-between">
-        <div class="section-title" style="margin:0">서류 선택</div>
+      <div class="summary-head">
+        <span class="label">선택된 서류</span>
+        <span class="summary-count zero" id="count3">0</span>
+        <span class="spacer"></span>
         <button class="select-all-btn" id="selectAllBtn3" onclick="toggleAllBasic3()">전체 선택</button>
       </div>
-      <div class="selected-bar empty" id="selectedBar3" style="margin-top:10px">선택된 서류가 없습니다</div>
+      <div class="chips empty" id="chips3">선택된 서류가 없습니다</div>
+    </div>
+    <div class="section">
+      <div class="section-title">서류 목록</div>
       <div class="doc-list" id="basicDocList3" style="margin-top:10px"></div>
     </div>
     <div class="section">
       <div class="section-title">수신 이메일</div>
-      <input type="email" class="email-input" id="emailInput3" placeholder="example@company.com">
+      {email3}
     </div>
     <div class="section">
       <button class="submit-btn" id="submitBtn3" onclick="submitBasic()">기본서류 발송 요청</button>
@@ -975,6 +1071,83 @@ function switchTab(n) {{
     document.getElementById('tab' + i).className = 'tab' + (i === n ? ' active' : '');
     document.getElementById('content' + i).className = 'tab-content' + (i === n ? ' active' : '');
   }}
+}}
+
+// ── 공통: 선택 칩 렌더 ─────────────────────────
+function renderChips(chipsId, countId, items, emptyText) {{
+  var box = document.getElementById(chipsId);
+  var cnt = document.getElementById(countId);
+  cnt.textContent = items.length;
+  cnt.className = 'summary-count' + (items.length ? '' : ' zero');
+  box.innerHTML = '';
+  if (!items.length) {{
+    box.className = 'chips empty';
+    box.textContent = emptyText;
+    return;
+  }}
+  box.className = 'chips';
+  items.forEach(function(it) {{
+    var chip = document.createElement('span');
+    chip.className = 'chip';
+    var txt = document.createElement('span');
+    txt.textContent = it.text;
+    chip.appendChild(txt);
+    var btn = document.createElement('button');
+    btn.innerHTML = '&times;';
+    btn.addEventListener('click', function(e) {{ e.stopPropagation(); it.remove(); }});
+    chip.appendChild(btn);
+    box.appendChild(chip);
+  }});
+}}
+
+// ── 공통: 이메일 입력 ─────────────────────────
+function getEmail(n) {{
+  var l = document.getElementById('emailLocal' + n).value.trim();
+  var d = document.getElementById('emailDomain' + n).value.trim();
+  if (!l || !d) return '';
+  return l + '@' + d;
+}}
+
+function pickDomain(n) {{
+  var sel = document.getElementById('emailSel' + n);
+  var inp = document.getElementById('emailDomain' + n);
+  if (sel.value) {{ inp.value = sel.value; }}
+  else {{ inp.value = ''; inp.focus(); }}
+  checkEmail(n);
+}}
+
+function clearEmailStatus(n) {{
+  var s = document.getElementById('emailStatus' + n);
+  s.className = 'email-status';
+  s.textContent = '';
+}}
+
+function checkEmail(n) {{
+  var email = getEmail(n);
+  var s = document.getElementById('emailStatus' + n);
+  if (!email) {{ s.className = 'email-status'; s.textContent = ''; return; }}
+  if (!/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{
+    s.className = 'email-status err';
+    s.textContent = '이메일 형식이 올바르지 않습니다';
+    return;
+  }}
+  s.className = 'email-status checking';
+  s.textContent = '도메인 확인 중...';
+  fetch('/api/check-email', {{
+    method: 'POST', headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{email: email}})
+  }})
+  .then(function(r) {{ return r.json(); }})
+  .then(function(d) {{
+    if (d.valid) {{
+      s.className = 'email-status ok';
+      s.textContent = '✓ 수신 가능한 도메인입니다';
+    }} else {{
+      s.className = 'email-status err';
+      s.textContent = '✗ ' + (d.reason || '확인할 수 없는 이메일 도메인입니다');
+    }}
+  }})
+  .catch(function() {{ s.className = 'email-status'; s.textContent = ''; }});
 }}
 
 // ── Tab 1 ─────────────────────────────────────
@@ -1027,28 +1200,14 @@ function removeProduct1(p) {{
 }}
 
 function updateSelectedBar1() {{
-  var bar = document.getElementById('selectedBar1');
-  if (!selected1.length) {{
-    bar.className = 'selected-bar empty';
-    bar.textContent = '선택된 품목이 없습니다';
-    return;
-  }}
-  bar.className = 'selected-bar';
-  bar.innerHTML = '';
-  selected1.forEach(function(p) {{
-    var tag = document.createElement('span');
-    tag.className = 'tag';
-    tag.textContent = p + ' ';
-    var btn = document.createElement('button');
-    btn.textContent = '×';
-    btn.addEventListener('click', function(e) {{ e.stopPropagation(); removeProduct1(p); }});
-    tag.appendChild(btn);
-    bar.appendChild(tag);
+  var items = selected1.map(function(p) {{
+    return {{text: p, remove: function() {{ removeProduct1(p); }}}};
   }});
+  renderChips('chips1', 'count1', items, '선택된 품목이 없습니다');
 }}
 
 function submitAll() {{
-  var email = document.getElementById('emailInput1').value.trim();
+  var email = getEmail(1);
   if (!selected1.length) {{ alert('품목을 1개 이상 선택해주세요.'); return; }}
   if (!email || !/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
   document.getElementById('submitBtn1').disabled = true;
@@ -1190,30 +1349,17 @@ function removeItem2(product, docIndex) {{
 }}
 
 function updateSelectedBar2() {{
-  var bar = document.getElementById('selectedBar2');
-  if (!selectedItems2.length) {{
-    bar.className = 'selected-bar empty';
-    bar.textContent = '선택된 서류가 없습니다';
-    return;
-  }}
-  bar.className = 'selected-bar';
-  bar.innerHTML = '';
-  selectedItems2.forEach(function(item) {{
-    var tag = document.createElement('span');
-    tag.className = 'tag';
-    tag.textContent = item.product + ' · ' + item.docType + ' ';
-    var btn = document.createElement('button');
-    btn.textContent = '×';
-    (function(p, di) {{
-      btn.addEventListener('click', function(e) {{ e.stopPropagation(); removeItem2(p, di); }});
-    }})(item.product, item.docIndex);
-    tag.appendChild(btn);
-    bar.appendChild(tag);
+  var items = selectedItems2.map(function(item) {{
+    return {{
+      text: item.product + ' · ' + item.docType,
+      remove: function() {{ removeItem2(item.product, item.docIndex); }}
+    }};
   }});
+  renderChips('chips2', 'count2', items, '선택된 서류가 없습니다');
 }}
 
 function submitSpecific() {{
-  var email = document.getElementById('emailInput2').value.trim();
+  var email = getEmail(2);
   if (!selectedItems2.length) {{ alert('서류를 1개 이상 선택해주세요.'); return; }}
   if (!email || !/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
   var grouped = {{}};
@@ -1321,30 +1467,14 @@ function removeBasic3(idx) {{
 }}
 
 function updateSelectedBar3() {{
-  var bar = document.getElementById('selectedBar3');
-  if (!selectedBasic3.length) {{
-    bar.className = 'selected-bar empty';
-    bar.textContent = '선택된 서류가 없습니다';
-    return;
-  }}
-  bar.className = 'selected-bar';
-  bar.innerHTML = '';
-  selectedBasic3.forEach(function(idx) {{
-    var tag = document.createElement('span');
-    tag.className = 'tag';
-    tag.textContent = BASIC_DOCS[idx] + ' ';
-    var btn = document.createElement('button');
-    btn.textContent = '×';
-    (function(i) {{
-      btn.addEventListener('click', function(e) {{ e.stopPropagation(); removeBasic3(i); }});
-    }})(idx);
-    tag.appendChild(btn);
-    bar.appendChild(tag);
+  var items = selectedBasic3.map(function(idx) {{
+    return {{text: BASIC_DOCS[idx], remove: function() {{ removeBasic3(idx); }}}};
   }});
+  renderChips('chips3', 'count3', items, '선택된 서류가 없습니다');
 }}
 
 function submitBasic() {{
-  var email = document.getElementById('emailInput3').value.trim();
+  var email = getEmail(3);
   if (!selectedBasic3.length) {{ alert('서류를 1개 이상 선택해주세요.'); return; }}
   if (!email || !/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
   document.getElementById('submitBtn3').disabled = true;
@@ -1382,6 +1512,17 @@ initBasic3();
     return Response(html, mimetype="text/html; charset=utf-8")
 
 
+@app.route("/api/check-email", methods=["POST"])
+def api_check_email():
+    """이메일 형식 + 도메인 실존(MX/A) 확인. 발송 전 사전 검증용."""
+    data  = request.json or {}
+    email = (data.get("email") or "").strip()
+    if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", email):
+        return jsonify({"ok": True, "valid": False, "reason": "형식이 올바르지 않습니다"})
+    valid, reason = verify_email_domain(email)
+    return jsonify({"ok": True, "valid": valid, "reason": reason})
+
+
 @app.route("/api/request", methods=["POST"])
 def api_request():
     data  = request.json or {}
@@ -1390,6 +1531,10 @@ def api_request():
 
     if not email or not re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", email):
         return jsonify({"ok": False, "error": "올바른 이메일 주소를 입력해주세요"}), 400
+
+    valid, reason = verify_email_domain(email)
+    if not valid:
+        return jsonify({"ok": False, "error": reason or "존재하지 않는 이메일 도메인입니다. 주소를 다시 확인해주세요."}), 400
 
     if mode == "basic":
         doc_indices = data.get("doc_indices", [])
