@@ -3,11 +3,11 @@
 - 카카오 오픈빌더 웹훅 처리
 - 품목 검색 → ZIP 생성 → 다운로드 링크 이메일 발송
 """
+import base64
 import io
 import json
 import os
 import re
-import smtplib
 import threading
 import uuid
 import zipfile
@@ -27,7 +27,10 @@ app = Flask(__name__)
 
 # ── 설정 ─────────────────────────────────────────────
 GMAIL_USER = os.getenv("GMAIL_USER")
-GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")  # Gmail 앱 비밀번호
+GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")       # SMTP 앱 비밀번호 (로컬 fallback)
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REFRESH_TOKEN = os.getenv("GOOGLE_REFRESH_TOKEN")
 COMPANY_NAME = os.getenv("COMPANY_NAME", "쌍곰")
 SERVER_BASE_URL = os.getenv("SERVER_BASE_URL", "http://localhost:5000")
 
@@ -183,12 +186,34 @@ def build_company_docs_html(server_base_url: str) -> str:
     </tr>"""
 
 
-def _smtp_ssl_ipv4(host: str, port: int, timeout: int = 15) -> smtplib.SMTP_SSL:
-    """Render 등 IPv6 미지원 환경에서 IPv4 강제 연결"""
-    import socket, ssl
-    ipv4 = socket.getaddrinfo(host, port, socket.AF_INET)[0][4][0]
-    ctx = ssl.create_default_context()
-    return smtplib.SMTP_SSL(ipv4, port, timeout=timeout, context=ctx)
+def _get_gmail_access_token() -> str:
+    """Gmail API용 access token 발급 (refresh token 사용)"""
+    resp = requests.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "refresh_token": GOOGLE_REFRESH_TOKEN,
+            "grant_type": "refresh_token",
+        },
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
+def _send_via_gmail_api(to_email: str, raw_msg_bytes: bytes):
+    """Gmail REST API로 이메일 발송"""
+    access_token = _get_gmail_access_token()
+    encoded = base64.urlsafe_b64encode(raw_msg_bytes).decode()
+    resp = requests.post(
+        f"https://gmail.googleapis.com/gmail/v1/users/{GMAIL_USER}/messages/send",
+        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+        json={"raw": encoded},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()
 
 
 def send_email(to_email: str, product_names: list[str], download_url: str):
@@ -313,9 +338,15 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
     msg["Subject"] = f"[{COMPANY_NAME}] 기술자료 이메일 송부"
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    with _smtp_ssl_ipv4("smtp.gmail.com", 465) as server:
-        server.login(GMAIL_USER, GMAIL_PASSWORD)
-        server.sendmail(GMAIL_USER, to_email, msg.as_string())
+    if GOOGLE_REFRESH_TOKEN:
+        _send_via_gmail_api(to_email, msg.as_bytes())
+    else:
+        # 로컬 개발용 SMTP fallback
+        import smtplib, socket, ssl
+        ipv4 = socket.getaddrinfo("smtp.gmail.com", 465, socket.AF_INET)[0][4][0]
+        with smtplib.SMTP_SSL(ipv4, 465, timeout=15, context=ssl.create_default_context()) as s:
+            s.login(GMAIL_USER, GMAIL_PASSWORD)
+            s.sendmail(GMAIL_USER, to_email, msg.as_string())
 
 
 # ═══════════════════════════════════════════════════
@@ -601,62 +632,23 @@ def test_smtp_diag():
 
 @app.route("/test-email")
 def test_email():
-    """SMTP 진단 - 백그라운드 스레드로 실행해 gunicorn 타임아웃 회피"""
-    results = {
+    """Gmail API 이메일 발송 테스트"""
+    result = {
         "gmail_user": GMAIL_USER,
-        "pw_set": bool(GMAIL_PASSWORD),
-        "pw_len": len(GMAIL_PASSWORD) if GMAIL_PASSWORD else 0,
-        "smtp_465": "pending",
-        "smtp_587": "pending",
-        "send": "pending",
+        "oauth_configured": bool(GOOGLE_REFRESH_TOKEN),
     }
-
-    done = threading.Event()
-
-    def run():
-        # 465 SSL
-        try:
-            with _smtp_ssl_ipv4("smtp.gmail.com", 465, timeout=8) as s:
-                s.login(GMAIL_USER, GMAIL_PASSWORD)
-                results["smtp_465"] = "login_ok"
-                msg = MIMEMultipart("alternative")
-                msg["From"] = f"{COMPANY_NAME} <{GMAIL_USER}>"
-                msg["To"] = GMAIL_USER
-                msg["Subject"] = "[쌍곰] Render 발송 테스트"
-                msg.attach(MIMEText("<p>Render 서버 테스트 메일입니다.</p>", "html", "utf-8"))
-                s.sendmail(GMAIL_USER, GMAIL_USER, msg.as_string())
-                results["send"] = "ok_465"
-                results["smtp_587"] = "skipped"
-        except Exception as e:
-            results["smtp_465"] = str(e)
-            # 587 STARTTLS 시도
-            try:
-                import socket as _sock
-                ipv4_587 = _sock.getaddrinfo("smtp.gmail.com", 587, _sock.AF_INET)[0][4][0]
-                with smtplib.SMTP(ipv4_587, 587, timeout=8) as s:
-                    s.starttls()
-                    s.login(GMAIL_USER, GMAIL_PASSWORD)
-                    results["smtp_587"] = "login_ok"
-                    msg = MIMEMultipart("alternative")
-                    msg["From"] = f"{COMPANY_NAME} <{GMAIL_USER}>"
-                    msg["To"] = GMAIL_USER
-                    msg["Subject"] = "[쌍곰] Render 발송 테스트 (587)"
-                    msg.attach(MIMEText("<p>Render 서버 테스트 메일입니다 (587).</p>", "html", "utf-8"))
-                    s.sendmail(GMAIL_USER, GMAIL_USER, msg.as_string())
-                    results["send"] = "ok_587"
-            except Exception as e2:
-                results["smtp_587"] = str(e2)
-                results["send"] = "failed"
-        done.set()
-
-    t = threading.Thread(target=run, daemon=True)
-    t.start()
-    done.wait(timeout=25)
-    if not done.is_set():
-        results["smtp_465"] = "timeout_25s"
-        results["smtp_587"] = "timeout_25s"
-        results["send"] = "timeout"
-    return jsonify(results)
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["From"] = f"{COMPANY_NAME} <{GMAIL_USER}>"
+        msg["To"] = GMAIL_USER
+        msg["Subject"] = "[쌍곰] Render 발송 테스트"
+        msg.attach(MIMEText("<p>Render 서버에서 Gmail API로 발송된 테스트 메일입니다.</p>", "html", "utf-8"))
+        _send_via_gmail_api(GMAIL_USER, msg.as_bytes())
+        result["send"] = "success"
+    except Exception as e:
+        result["send"] = "error"
+        result["error"] = str(e)
+    return jsonify(result)
 
 
 @app.route("/health")
