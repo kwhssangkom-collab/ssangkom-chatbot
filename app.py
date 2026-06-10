@@ -123,7 +123,7 @@ def create_zip(product_names: list[str]) -> str:
                     resp = requests.get(doc["url"], headers=HEADERS, timeout=20)
                     if resp.status_code == 200:
                         doc_type = doc.get("type", "파일")
-                        safe_name = product.replace("/", "-")
+                        safe_name = re.sub(r'[/\\:*?"<>|]', '', product)
                         filename = f"{safe_name}/{doc_type}_{i}.pdf"
                         zf.writestr(filename, resp.content)
                 except Exception as e:
