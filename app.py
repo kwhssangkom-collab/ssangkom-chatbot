@@ -123,7 +123,8 @@ def create_zip(product_names: list[str]) -> str:
                     resp = requests.get(doc["url"], headers=HEADERS, timeout=20)
                     if resp.status_code == 200:
                         doc_type = doc.get("type", "파일")
-                        filename = f"{product}/{doc_type}_{i}.pdf"
+                        safe_name = product.replace("/", "-")
+                        filename = f"{safe_name}/{doc_type}_{i}.pdf"
                         zf.writestr(filename, resp.content)
                 except Exception as e:
                     print(f"파일 다운로드 실패: {doc['url']} - {e}")
@@ -176,7 +177,7 @@ def build_company_docs_html(server_base_url: str) -> str:
                   text-decoration:none;font-size:15px;font-weight:700;
                   padding:14px 36px;border-radius:8px;
                   border:1.5px solid #003389;letter-spacing:0.1px;">
-          &#9660;&nbsp; 회사 기본서류 다운로드
+          &#9660;&nbsp; 기본서류 다운로드
         </a>
         <p style="font-size:13px;color:#666;margin:12px 0 0;line-height:1.7;">
           국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외<br>
@@ -551,7 +552,7 @@ def download_company_docs():
     return send_file(
         zip_buffer,
         as_attachment=True,
-        download_name="쌍곰_회사기본서류.zip",
+        download_name="쌍곰_기본서류.zip",
         mimetype="application/zip"
     )
 
