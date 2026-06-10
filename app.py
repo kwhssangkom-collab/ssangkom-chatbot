@@ -658,9 +658,9 @@ def request_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{background:#003389;padding:16px 20px;display:flex;align-items:center;gap:12px}}
-.header img{{height:32px}}
-.header span{{color:#fff;font-size:17px;font-weight:700}}
+.header{{background:#003389;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
+.header img{{height:36px}}
+.header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .section-title{{font-size:13px;font-weight:700;color:#003389;letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase}}
 .search-wrap{{position:relative}}
