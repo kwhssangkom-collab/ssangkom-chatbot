@@ -455,7 +455,9 @@ def _send_mail(to_email: str, subject: str, html: str):
             s.sendmail(GMAIL_USER, to_email, msg.as_string())
 
 
-def _email_shell(header_title: str, body_inner: str, download_url: str, btn_label: str) -> str:
+def _email_shell(header_title: str, body_inner: str, download_url: str, btn_label: str,
+                 include_basic_btn: bool = False) -> str:
+    basic_btn_html = build_company_docs_html(SERVER_BASE_URL) if include_basic_btn else ""
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#eef1f6;font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;">
@@ -476,6 +478,7 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
           <a href="{download_url}" style="display:inline-block;background:#003389;color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 48px;border-radius:8px;box-shadow:0 4px 14px rgba(0,51,137,.28);">&#9660;&nbsp; {btn_label}</a>
           <p style="margin:10px 0 0;font-size:12px;color:#888;text-align:center;">※ 링크 유효기간: 발송 후 24시간</p>
         </td></tr>
+        {basic_btn_html}
         <tr><td style="padding:18px 36px 28px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td style="border-top:1px solid #ebebeb;padding-top:18px;">
@@ -506,7 +509,7 @@ def send_email_specific(to_email: str, summary: list, download_url: str):
         </td></tr>
       </table>
     </td></tr>"""
-    html = _email_shell("기술자료 이메일 송부", body, download_url, "기술자료 다운로드")
+    html = _email_shell("기술자료 이메일 송부", body, download_url, "기술자료 다운로드", include_basic_btn=True)
     _send_mail(to_email, f"[{COMPANY_NAME}] 기술자료 이메일 송부", html)
 
 
@@ -872,7 +875,7 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 </div>
 
 <div class="notice">
-  <p>&#8226; 기술자료는 홈페이지에 업로드된 자료를 기반으로 발송됩니다.<br>&#8226; 기술자료 관련 문의사항은 <strong>기술연구소</strong>로 문의해 주시기 바랍니다.</p>
+  <p>&#8226; 기술자료는 홈페이지에 업로드된 자료를 기반으로 발송됩니다.<br>&#8226; <strong>품목별 전체</strong> / <strong>서류 직접선택</strong> 발송 시 회사 <strong>기본서류 다운로드 버튼</strong>이 이메일에 함께 발송됩니다.<br>&#8226; 기술자료 관련 문의사항은 <strong>기술연구소</strong>로 문의해 주시기 바랍니다.</p>
 </div>
 
 <!-- ── Tab 1: 품목별 전체 ── -->
