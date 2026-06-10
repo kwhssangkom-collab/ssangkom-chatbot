@@ -185,48 +185,53 @@ def _save_zip_temp(zip_buffer: io.BytesIO) -> str:
     return f"{SERVER_BASE_URL}/download/{file_id}"
 
 
-def create_specific_zip(product: str, doc_indices: list) -> str:
-    """특정 품목의 선택된 서류만 ZIP으로 묶고 임시 다운로드 URL 반환"""
-    docs = DOCUMENT_MAP.get(product, [])
-    safe_folder = re.sub(r'[/\\:*?"<>|]', '', product)
-
+def create_specific_zip(selections: list) -> str:
+    """selections: [{"product": str, "doc_indices": list[int]}, ...]"""
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for idx in doc_indices:
-            if idx < 0 or idx >= len(docs):
-                continue
-            doc = docs[idx]
-            try:
-                fetch_url = doc.get("github_url") or doc["url"]
-                resp = requests.get(fetch_url, headers=HEADERS, timeout=20)
-                if resp.status_code != 200:
-                    print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {fetch_url}")
+        for sel in selections:
+            product    = sel.get("product", "")
+            doc_indices = sel.get("doc_indices", [])
+            docs = DOCUMENT_MAP.get(product, [])
+            safe_folder = re.sub(r'[/\\:*?"<>|]', '', product)
+            for idx in doc_indices:
+                if idx < 0 or idx >= len(docs):
                     continue
-                if not resp.content.startswith(b"%PDF"):
-                    print(f"PDF가 아닌 응답 수신 (건너뜀): {fetch_url}")
-                    continue
-                if doc.get("filename"):
-                    safe_filename = re.sub(r'[/\\:*?"<>|]', '', doc["filename"])
-                else:
-                    cd = resp.headers.get("Content-Disposition", "")
-                    real_name = _parse_cd_filename(cd)
-                    if real_name:
-                        safe_filename = re.sub(r'[/\\:*?"<>|]', '', real_name)
+                doc = docs[idx]
+                try:
+                    fetch_url = doc.get("github_url") or doc["url"]
+                    resp = requests.get(fetch_url, headers=HEADERS, timeout=20)
+                    if resp.status_code != 200:
+                        print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {fetch_url}")
+                        continue
+                    if not resp.content.startswith(b"%PDF"):
+                        print(f"PDF가 아닌 응답 수신 (건너뜀): {fetch_url}")
+                        continue
+                    if doc.get("filename"):
+                        safe_filename = re.sub(r'[/\\:*?"<>|]', '', doc["filename"])
                     else:
-                        doc_type = doc.get("type", "파일")
-                        safe_filename = f"{doc_type}_{idx + 1}.pdf"
-                zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
-            except Exception as e:
-                print(f"파일 다운로드 실패: {doc.get('url', '')} - {e}")
-
+                        cd = resp.headers.get("Content-Disposition", "")
+                        real_name = _parse_cd_filename(cd)
+                        if real_name:
+                            safe_filename = re.sub(r'[/\\:*?"<>|]', '', real_name)
+                        else:
+                            doc_type = doc.get("type", "파일")
+                            safe_filename = f"{doc_type}_{idx + 1}.pdf"
+                    zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
+                except Exception as e:
+                    print(f"파일 다운로드 실패: {doc.get('url', '')} - {e}")
     return _save_zip_temp(zip_buffer)
 
 
-def create_basic_zip() -> str:
-    """회사 기본서류 ZIP 생성 후 임시 다운로드 URL 반환"""
+def create_basic_zip(doc_indices: list = None) -> str:
+    """doc_indices: None or [] = 전체, list[int] = 특정 서류만"""
+    if doc_indices:
+        docs = [COMPANY_DOCS_LIST[i] for i in doc_indices if 0 <= i < len(COMPANY_DOCS_LIST)]
+    else:
+        docs = COMPANY_DOCS_LIST
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for doc in COMPANY_DOCS_LIST:
+        for doc in docs:
             try:
                 resp = requests.get(doc["url"], headers=HEADERS, timeout=20)
                 if resp.status_code == 200:
@@ -450,45 +455,31 @@ def _send_mail(to_email: str, subject: str, html: str):
             s.sendmail(GMAIL_USER, to_email, msg.as_string())
 
 
-def send_email_specific(to_email: str, product: str, doc_labels: list, download_url: str):
-    """특정 서류 발송 이메일"""
-    doc_list_html = "".join(
-        f'<tr><td style="padding:5px 0;color:#1a1a1a;font-size:16px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {label}</td></tr>'
-        for label in doc_labels
-    )
-    html = f"""<!DOCTYPE html>
+def _email_shell(header_title: str, body_inner: str, download_url: str, btn_label: str) -> str:
+    return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#eef1f6;font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:32px 0 48px;">
     <tr><td align="center">
-      <table width="680" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.09);">
+      <table width="680" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.09);">
         <tr><td style="padding:28px 36px 24px;">
-          <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="쌍곰" width="192" height="auto" style="display:block;">
+          <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM" width="160" height="auto" style="display:block;">
         </td></tr>
-        <tr><td style="background:#003389;padding:24px 36px 26px;">
-          <p style="color:#fff;font-size:24px;font-weight:700;margin:0;line-height:1.4;letter-spacing:-0.3px;">기술자료 이메일 송부</p>
+        <tr><td style="background:#003389;padding:22px 36px 24px;">
+          <p style="color:#fff;font-size:22px;font-weight:700;margin:0;line-height:1.4;letter-spacing:-.3px;">{header_title}</p>
         </td></tr>
-        <tr><td style="padding:28px 36px 0;">
-          <p style="color:#333;font-size:16px;line-height:1.95;margin:0;">안녕하세요.<br>요청하신 품목별 기술자료의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>아래 버튼을 클릭하시면 파일을 즉시 다운로드하실 수 있습니다.</p>
+        <tr><td style="padding:24px 36px 0;">
+          <p style="color:#333;font-size:15px;line-height:1.95;margin:0;">안녕하세요.<br>요청하신 기술자료의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>아래 버튼을 클릭하시면 파일을 즉시 다운로드하실 수 있습니다.</p>
         </td></tr>
-        <tr><td style="padding:20px 36px 0;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
-            <tr><td style="padding:18px 22px 20px;">
-              <p style="font-size:12px;color:#003389;font-weight:700;letter-spacing:1.8px;margin:0 0 6px;text-transform:uppercase;">품목</p>
-              <p style="font-size:16px;font-weight:600;color:#1a1a1a;margin:0 0 14px;">{product}</p>
-              <p style="font-size:12px;color:#003389;font-weight:700;letter-spacing:1.8px;margin:0 0 12px;text-transform:uppercase;">포함된 서류</p>
-              <table width="100%" cellpadding="0" cellspacing="0">{doc_list_html}</table>
-            </td></tr>
-          </table>
+        {body_inner}
+        <tr><td style="padding:22px 36px 8px;text-align:center;">
+          <a href="{download_url}" style="display:inline-block;background:#003389;color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 48px;border-radius:8px;box-shadow:0 4px 14px rgba(0,51,137,.28);">&#9660;&nbsp; {btn_label}</a>
+          <p style="margin:10px 0 0;font-size:12px;color:#888;text-align:center;">※ 링크 유효기간: 발송 후 24시간</p>
         </td></tr>
-        <tr><td style="padding:24px 36px 8px;text-align:center;">
-          <a href="{download_url}" style="display:inline-block;background:#003389;color:#fff;text-decoration:none;font-size:17px;font-weight:700;padding:17px 52px;border-radius:8px;box-shadow:0 4px 14px rgba(0,51,137,0.28);">&#9660;&nbsp; 기술자료 다운로드</a>
-          <p style="margin:12px 0 0;font-size:13px;color:#666;text-align:center;">※ 링크 유효기간: 발송 후 24시간</p>
-        </td></tr>
-        <tr><td style="padding:20px 36px 28px;">
+        <tr><td style="padding:18px 36px 28px;">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="border-top:1px solid #ebebeb;padding-top:20px;">
-              <p style="color:#666;font-size:13px;line-height:2;margin:0;">※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>※ 문의사항은 담당 영업사원 또는 대표번호로 연락 바랍니다.</p>
+            <tr><td style="border-top:1px solid #ebebeb;padding-top:18px;">
+              <p style="color:#888;font-size:12px;line-height:2;margin:0;">※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>※ 기술자료 관련 문의사항은 기술연구소로 문의해 주시기 바랍니다.</p>
             </td></tr>
           </table>
         </td></tr>
@@ -496,53 +487,45 @@ def send_email_specific(to_email: str, product: str, doc_labels: list, download_
     </td></tr>
   </table>
 </body></html>"""
+
+
+def send_email_specific(to_email: str, summary: list, download_url: str):
+    """summary: [{"product": str, "labels": list[str]}, ...]"""
+    product_blocks = ""
+    for item in summary:
+        doc_rows = "".join(
+            f'<tr><td style="padding:2px 0;color:#444;font-size:14px;line-height:1.6;">&#8226; {label}</td></tr>'
+            for label in item["labels"]
+        )
+        product_blocks += f'<p style="font-size:13px;font-weight:700;color:#003389;margin:10px 0 4px;">{item["product"]}</p><table width="100%" cellpadding="0" cellspacing="0">{doc_rows}</table>'
+    body = f"""<tr><td style="padding:16px 36px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
+        <tr><td style="padding:16px 20px 18px;">
+          <p style="font-size:11px;color:#003389;font-weight:700;letter-spacing:1.8px;margin:0 0 10px;text-transform:uppercase;">포함된 기술자료</p>
+          {product_blocks}
+        </td></tr>
+      </table>
+    </td></tr>"""
+    html = _email_shell("기술자료 이메일 송부", body, download_url, "기술자료 다운로드")
     _send_mail(to_email, f"[{COMPANY_NAME}] 기술자료 이메일 송부", html)
 
 
-def send_email_basic(to_email: str, download_url: str):
-    """기본서류 발송 이메일"""
-    doc_list_html = "".join(
-        f'<tr><td style="padding:5px 0;color:#1a1a1a;font-size:16px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {doc["label"]}</td></tr>'
-        for doc in COMPANY_DOCS_LIST
+def send_email_basic(to_email: str, download_url: str, doc_labels: list = None):
+    if doc_labels is None:
+        doc_labels = [d["label"] for d in COMPANY_DOCS_LIST]
+    doc_rows = "".join(
+        f'<tr><td style="padding:4px 0;color:#1a1a1a;font-size:15px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {label}</td></tr>'
+        for label in doc_labels
     )
-    html = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#eef1f6;font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:32px 0 48px;">
-    <tr><td align="center">
-      <table width="680" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.09);">
-        <tr><td style="padding:28px 36px 24px;">
-          <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="쌍곰" width="192" height="auto" style="display:block;">
-        </td></tr>
-        <tr><td style="background:#003389;padding:24px 36px 26px;">
-          <p style="color:#fff;font-size:24px;font-weight:700;margin:0;line-height:1.4;letter-spacing:-0.3px;">기본서류 이메일 송부</p>
-        </td></tr>
-        <tr><td style="padding:28px 36px 0;">
-          <p style="color:#333;font-size:16px;line-height:1.95;margin:0;">안녕하세요.<br>요청하신 회사 기본서류의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>아래 버튼을 클릭하시면 파일을 즉시 다운로드하실 수 있습니다.</p>
-        </td></tr>
-        <tr><td style="padding:20px 36px 0;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
-            <tr><td style="padding:18px 22px 20px;">
-              <p style="font-size:12px;color:#003389;font-weight:700;letter-spacing:1.8px;margin:0 0 12px;text-transform:uppercase;">포함된 서류</p>
-              <table width="100%" cellpadding="0" cellspacing="0">{doc_list_html}</table>
-            </td></tr>
-          </table>
-        </td></tr>
-        <tr><td style="padding:24px 36px 28px;text-align:center;">
-          <a href="{download_url}" style="display:inline-block;background:#003389;color:#fff;text-decoration:none;font-size:17px;font-weight:700;padding:17px 52px;border-radius:8px;box-shadow:0 4px 14px rgba(0,51,137,0.28);">&#9660;&nbsp; 기본서류 다운로드</a>
-          <p style="margin:12px 0 0;font-size:13px;color:#666;text-align:center;">※ 링크 유효기간: 발송 후 24시간</p>
-        </td></tr>
-        <tr><td style="padding:0 36px 28px;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="border-top:1px solid #ebebeb;padding-top:20px;">
-              <p style="color:#666;font-size:13px;line-height:2;margin:0;">※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>※ 문의사항은 담당 영업사원 또는 대표번호로 연락 바랍니다.</p>
-            </td></tr>
-          </table>
+    body = f"""<tr><td style="padding:16px 36px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
+        <tr><td style="padding:16px 20px 18px;">
+          <p style="font-size:11px;color:#003389;font-weight:700;letter-spacing:1.8px;margin:0 0 12px;text-transform:uppercase;">포함된 서류</p>
+          <table width="100%" cellpadding="0" cellspacing="0">{doc_rows}</table>
         </td></tr>
       </table>
-    </td></tr>
-  </table>
-</body></html>"""
+    </td></tr>"""
+    html = _email_shell("기본서류 이메일 송부", body, download_url, "기본서류 다운로드")
     _send_mail(to_email, f"[{COMPANY_NAME}] 기본서류 이메일 송부", html)
 
 
@@ -810,11 +793,8 @@ def admin_send_test():
 
 @app.route("/request")
 def request_page():
-    products_json = json.dumps(PRODUCT_NAMES, ensure_ascii=False)
-    basic_docs_html = "".join(
-        f'<div class="basic-doc-item">&#8226; {doc["label"]}</div>'
-        for doc in COMPANY_DOCS_LIST
-    )
+    products_json    = json.dumps(PRODUCT_NAMES, ensure_ascii=False)
+    basic_docs_json  = json.dumps([d["label"] for d in COMPANY_DOCS_LIST], ensure_ascii=False)
     html = f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -825,11 +805,13 @@ def request_page():
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
 .header{{background:#003389;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
-.header img{{height:44px;filter:brightness(0) invert(1)}}
+.header img{{height:36px;filter:brightness(0) invert(1)}}
 .header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .tabs{{display:flex;background:#fff;border-bottom:2px solid #e0e6f0;position:sticky;top:0;z-index:10}}
 .tab{{flex:1;padding:13px 6px;text-align:center;font-size:12px;font-weight:600;color:#888;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.2s;line-height:1.35}}
 .tab.active{{color:#003389;border-bottom-color:#003389}}
+.notice{{background:#f0f4ff;border-left:3px solid #003389;margin:12px 12px 0;border-radius:8px;padding:11px 16px}}
+.notice p{{font-size:12px;color:#555;line-height:1.8;margin:0}}
 .tab-content{{display:none}}
 .tab-content.active{{display:block}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
@@ -848,8 +830,10 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .product-item:last-child{{border-bottom:none}}
 .product-item:hover{{background:#f4f7ff}}
 .product-item.checked{{background:#eef2fb}}
+.product-item.focused{{background:#e6edff;border-left:3px solid #003389}}
 .product-item input[type=checkbox]{{width:18px;height:18px;accent-color:#003389;margin-right:12px;flex-shrink:0;cursor:pointer}}
-.product-item label{{font-size:15px;color:#1a1a1a;cursor:pointer;line-height:1.4}}
+.product-item label{{font-size:15px;color:#1a1a1a;cursor:pointer;line-height:1.4;flex:1}}
+.count-badge{{display:inline-block;background:#003389;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}}
 .no-result{{text-align:center;padding:24px;color:#aaa;font-size:14px}}
 .email-input{{width:100%;padding:12px 16px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;font-family:inherit;outline:none;transition:.2s}}
 .email-input:focus{{border-color:#003389}}
@@ -862,9 +846,9 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .success .icon{{font-size:56px;margin-bottom:16px}}
 .success h2{{color:#003389;font-size:20px;margin-bottom:8px}}
 .success p{{color:#666;font-size:14px;line-height:1.7}}
-.selected-product-card{{background:#eef2fb;border:1.5px solid #003389;border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}}
-.selected-product-card span{{font-size:15px;font-weight:600;color:#003389}}
-.selected-product-card button{{background:none;border:none;color:#888;font-size:18px;cursor:pointer;padding:0 4px}}
+.doc-section-product{{font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:10px;line-height:1.4;padding:8px 12px;background:#f4f7fd;border-radius:6px}}
+.row-between{{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}}
+.select-all-btn{{background:none;border:1.5px solid #003389;color:#003389;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}}
 .doc-list{{border:1.5px solid #dde3ef;border-radius:8px;max-height:260px;overflow-y:auto}}
 .doc-item{{display:flex;align-items:center;padding:11px 14px;border-bottom:1px solid #f0f3f8;cursor:pointer;transition:.15s}}
 .doc-item:last-child{{border-bottom:none}}
@@ -872,8 +856,6 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .doc-item.checked{{background:#eef2fb}}
 .doc-item input[type=checkbox]{{width:18px;height:18px;accent-color:#003389;margin-right:12px;flex-shrink:0;cursor:pointer}}
 .doc-item label{{font-size:15px;color:#1a1a1a;line-height:1.4}}
-.basic-doc-list{{background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;padding:14px 18px}}
-.basic-doc-item{{padding:5px 0;color:#1a1a1a;font-size:15px;line-height:1.6}}
 </style>
 </head>
 <body>
@@ -884,12 +866,16 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 </div>
 
 <div class="tabs">
-  <div class="tab active" id="tab1" onclick="switchTab(1)">전체<br>기술자료</div>
-  <div class="tab" id="tab2" onclick="switchTab(2)">특정<br>서류 선택</div>
-  <div class="tab" id="tab3" onclick="switchTab(3)">기본서류</div>
+  <div class="tab active" id="tab1" onclick="switchTab(1)">품목별<br>전체</div>
+  <div class="tab" id="tab2" onclick="switchTab(2)">서류<br>직접선택</div>
+  <div class="tab" id="tab3" onclick="switchTab(3)">기본서류<br>선택</div>
 </div>
 
-<!-- ── Tab 1: 전체 승인서류 ── -->
+<div class="notice">
+  <p>&#8226; 기술자료는 홈페이지에 업로드된 자료를 기반으로 발송됩니다.<br>&#8226; 기술자료 관련 문의사항은 <strong>기술연구소</strong>로 문의해 주시기 바랍니다.</p>
+</div>
+
+<!-- ── Tab 1: 품목별 전체 ── -->
 <div class="tab-content active" id="content1">
   <div id="main1">
     <div class="section">
@@ -916,22 +902,24 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
   </div>
 </div>
 
-<!-- ── Tab 2: 특정 서류 선택 ── -->
+<!-- ── Tab 2: 서류 직접선택 ── -->
 <div class="tab-content" id="content2">
   <div id="main2">
     <div class="section">
+      <div class="section-title">선택된 서류</div>
+      <div class="selected-bar empty" id="selectedBar2">선택된 서류가 없습니다</div>
+    </div>
+    <div class="section">
       <div class="step-label">① 품목 선택</div>
-      <div id="productSelectedCard2" style="display:none"></div>
-      <div id="productSearchArea2">
-        <div class="search-wrap">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="searchInput2" placeholder="품목명 검색..." oninput="filterProducts2()">
-        </div>
-        <div class="product-list" id="productList2" style="margin-top:10px"></div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput2" placeholder="품목명 검색..." oninput="filterProducts2()">
       </div>
+      <div class="product-list" id="productList2" style="margin-top:10px"></div>
     </div>
     <div class="section" id="docSection2" style="display:none">
       <div class="step-label">② 서류 선택</div>
+      <div class="doc-section-product" id="docSectionLabel2"></div>
       <div class="doc-list" id="docList2"></div>
     </div>
     <div class="section">
@@ -949,12 +937,16 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
   </div>
 </div>
 
-<!-- ── Tab 3: 기본서류 ── -->
+<!-- ── Tab 3: 기본서류 선택 ── -->
 <div class="tab-content" id="content3">
   <div id="main3">
     <div class="section">
-      <div class="section-title">포함 서류</div>
-      <div class="basic-doc-list">{basic_docs_html}</div>
+      <div class="row-between">
+        <div class="section-title" style="margin:0">서류 선택</div>
+        <button class="select-all-btn" id="selectAllBtn3" onclick="toggleAllBasic3()">전체 선택</button>
+      </div>
+      <div class="selected-bar empty" id="selectedBar3" style="margin-top:10px">선택된 서류가 없습니다</div>
+      <div class="doc-list" id="basicDocList3" style="margin-top:10px"></div>
     </div>
     <div class="section">
       <div class="section-title">수신 이메일</div>
@@ -973,10 +965,7 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 
 <script>
 var ALL_PRODUCTS = {products_json};
-var selected1 = [];
-var selectedProduct2 = null;
-var selectedDocs2 = [];
-var listEl1 = null;
+var BASIC_DOCS   = {basic_docs_json};
 
 function switchTab(n) {{
   for (var i = 1; i <= 3; i++) {{
@@ -986,6 +975,9 @@ function switchTab(n) {{
 }}
 
 // ── Tab 1 ─────────────────────────────────────
+var selected1 = [];
+var listEl1 = null;
+
 function renderList1(products) {{
   listEl1 = listEl1 || document.getElementById('productList1');
   listEl1.innerHTML = '';
@@ -1083,6 +1075,10 @@ function submitAll() {{
 }}
 
 // ── Tab 2 ─────────────────────────────────────
+var selectedItems2  = [];
+var focusedProduct2 = null;
+var docsCache2      = {{}};
+
 function renderList2(products) {{
   var listEl = document.getElementById('productList2');
   listEl.innerHTML = '';
@@ -1094,12 +1090,19 @@ function renderList2(products) {{
     return;
   }}
   products.forEach(function(p) {{
+    var count = selectedItems2.filter(function(x) {{ return x.product === p; }}).length;
     var div = document.createElement('div');
-    div.className = 'product-item';
+    div.className = 'product-item' + (focusedProduct2 === p ? ' focused' : '');
     var lbl = document.createElement('label');
     lbl.textContent = p;
     div.appendChild(lbl);
-    div.addEventListener('click', function() {{ selectProduct2(p); }});
+    if (count > 0) {{
+      var badge = document.createElement('span');
+      badge.className = 'count-badge';
+      badge.textContent = count;
+      div.appendChild(badge);
+    }}
+    div.addEventListener('click', function() {{ focusProduct2(p); }});
     listEl.appendChild(div);
   }});
 }}
@@ -1110,92 +1113,119 @@ function filterProducts2() {{
   renderList2(filtered);
 }}
 
-function selectProduct2(p) {{
-  selectedProduct2 = p;
-  selectedDocs2 = [];
-  document.getElementById('productSearchArea2').style.display = 'none';
-  var card = document.getElementById('productSelectedCard2');
-  card.style.display = 'block';
-  card.innerHTML = '';
-  var wrap = document.createElement('div');
-  wrap.className = 'selected-product-card';
-  var name = document.createElement('span');
-  name.textContent = p;
-  var btn = document.createElement('button');
-  btn.textContent = '✕';
-  btn.addEventListener('click', function() {{ clearProduct2(); }});
-  wrap.appendChild(name);
-  wrap.appendChild(btn);
-  card.appendChild(wrap);
-  loadDocs2(p);
-}}
-
-function clearProduct2() {{
-  selectedProduct2 = null;
-  selectedDocs2 = [];
-  document.getElementById('productSelectedCard2').style.display = 'none';
-  document.getElementById('productSearchArea2').style.display = 'block';
-  document.getElementById('searchInput2').value = '';
-  document.getElementById('docSection2').style.display = 'none';
-  renderList2(ALL_PRODUCTS);
-}}
-
-function loadDocs2(product) {{
-  fetch('/api/product-docs', {{
-    method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{product: product}})
-  }})
-  .then(function(r) {{ return r.json(); }})
-  .then(function(d) {{
-    if (!d.ok) {{ alert('서류 목록을 불러오지 못했습니다.'); return; }}
-    renderDocs2(d.docs);
-    document.getElementById('docSection2').style.display = 'block';
-  }})
-  .catch(function() {{ alert('서버 오류가 발생했습니다.'); }});
+function focusProduct2(p) {{
+  focusedProduct2 = p;
+  filterProducts2();
+  document.getElementById('docSectionLabel2').textContent = p;
+  document.getElementById('docSection2').style.display = 'block';
+  if (docsCache2[p]) {{
+    renderDocs2(docsCache2[p]);
+  }} else {{
+    fetch('/api/product-docs', {{
+      method: 'POST', headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{product: p}})
+    }})
+    .then(function(r) {{ return r.json(); }})
+    .then(function(d) {{
+      if (d.ok) {{ docsCache2[p] = d.docs; renderDocs2(d.docs); }}
+    }});
+  }}
 }}
 
 function renderDocs2(docs) {{
-  selectedDocs2 = [];
   var listEl = document.getElementById('docList2');
   listEl.innerHTML = '';
   docs.forEach(function(doc) {{
+    var already = selectedItems2.some(function(x) {{
+      return x.product === focusedProduct2 && x.docIndex === doc.index;
+    }});
     var div = document.createElement('div');
-    div.className = 'doc-item';
+    div.className = 'doc-item' + (already ? ' checked' : '');
     var chk = document.createElement('input');
     chk.type = 'checkbox';
-    chk.checked = false;
+    chk.checked = already;
     var lbl = document.createElement('label');
     lbl.textContent = doc.type;
     div.appendChild(chk);
     div.appendChild(lbl);
-    div.addEventListener('click', function() {{ toggleDoc2(doc.index, div, chk); }});
+    (function(d, el, c) {{
+      el.addEventListener('click', function() {{
+        toggleDoc2(focusedProduct2, d.index, d.type, el, c);
+      }});
+    }})(doc, div, chk);
     listEl.appendChild(div);
   }});
 }}
 
-function toggleDoc2(idx, div, chk) {{
-  var pos = selectedDocs2.indexOf(idx);
+function toggleDoc2(product, docIndex, docType, div, chk) {{
+  var pos = -1;
+  for (var i = 0; i < selectedItems2.length; i++) {{
+    if (selectedItems2[i].product === product && selectedItems2[i].docIndex === docIndex) {{
+      pos = i; break;
+    }}
+  }}
   if (pos === -1) {{
-    selectedDocs2.push(idx);
+    selectedItems2.push({{product: product, docIndex: docIndex, docType: docType}});
     div.classList.add('checked');
     chk.checked = true;
   }} else {{
-    selectedDocs2.splice(pos, 1);
+    selectedItems2.splice(pos, 1);
     div.classList.remove('checked');
     chk.checked = false;
   }}
+  updateSelectedBar2();
+  filterProducts2();
+}}
+
+function removeItem2(product, docIndex) {{
+  selectedItems2 = selectedItems2.filter(function(x) {{
+    return !(x.product === product && x.docIndex === docIndex);
+  }});
+  updateSelectedBar2();
+  filterProducts2();
+  if (focusedProduct2 && docsCache2[focusedProduct2]) renderDocs2(docsCache2[focusedProduct2]);
+}}
+
+function updateSelectedBar2() {{
+  var bar = document.getElementById('selectedBar2');
+  if (!selectedItems2.length) {{
+    bar.className = 'selected-bar empty';
+    bar.textContent = '선택된 서류가 없습니다';
+    return;
+  }}
+  bar.className = 'selected-bar';
+  bar.innerHTML = '';
+  selectedItems2.forEach(function(item) {{
+    var tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = item.product + ' · ' + item.docType + ' ';
+    var btn = document.createElement('button');
+    btn.textContent = '×';
+    (function(p, di) {{
+      btn.addEventListener('click', function(e) {{ e.stopPropagation(); removeItem2(p, di); }});
+    }})(item.product, item.docIndex);
+    tag.appendChild(btn);
+    bar.appendChild(tag);
+  }});
 }}
 
 function submitSpecific() {{
   var email = document.getElementById('emailInput2').value.trim();
-  if (!selectedProduct2) {{ alert('품목을 선택해주세요.'); return; }}
-  if (!selectedDocs2.length) {{ alert('서류를 1개 이상 선택해주세요.'); return; }}
+  if (!selectedItems2.length) {{ alert('서류를 1개 이상 선택해주세요.'); return; }}
   if (!email || !/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
+  var grouped = {{}};
+  selectedItems2.forEach(function(item) {{
+    if (!grouped[item.product]) grouped[item.product] = [];
+    grouped[item.product].push(item.docIndex);
+  }});
+  var selections = Object.keys(grouped).map(function(p) {{
+    return {{product: p, doc_indices: grouped[p]}};
+  }});
   document.getElementById('submitBtn2').disabled = true;
   document.getElementById('loading2').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'specific', product: selectedProduct2, doc_indices: selectedDocs2, email: email}})
+    body: JSON.stringify({{mode: 'specific', selections: selections, email: email}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1203,7 +1233,7 @@ function submitSpecific() {{
       document.getElementById('main2').style.display = 'none';
       document.getElementById('success2').style.display = 'block';
       document.getElementById('successMsg2').innerHTML =
-        '<b>' + selectedProduct2 + '</b><br>선택 서류 ' + d.file_count + '개<br><br>📧 ' + email + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
+        '선택 서류 ' + d.file_count + '개<br><br>📧 ' + email + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
     }} else {{
       alert('오류: ' + (d.error || ''));
       document.getElementById('submitBtn2').disabled = false;
@@ -1218,14 +1248,107 @@ function submitSpecific() {{
 }}
 
 // ── Tab 3 ─────────────────────────────────────
+var selectedBasic3 = [];
+
+function initBasic3() {{
+  var listEl = document.getElementById('basicDocList3');
+  listEl.innerHTML = '';
+  BASIC_DOCS.forEach(function(label, i) {{
+    var div = document.createElement('div');
+    div.className = 'doc-item';
+    div.id = 'basicItem3_' + i;
+    var chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.checked = false;
+    var lbl = document.createElement('label');
+    lbl.textContent = label;
+    div.appendChild(chk);
+    div.appendChild(lbl);
+    (function(idx, el, c) {{
+      el.addEventListener('click', function() {{ toggleBasic3(idx, el, c); }});
+    }})(i, div, chk);
+    listEl.appendChild(div);
+  }});
+}}
+
+function toggleBasic3(idx, div, chk) {{
+  var pos = selectedBasic3.indexOf(idx);
+  if (pos === -1) {{
+    selectedBasic3.push(idx);
+    div.classList.add('checked');
+    chk.checked = true;
+  }} else {{
+    selectedBasic3.splice(pos, 1);
+    div.classList.remove('checked');
+    chk.checked = false;
+  }}
+  updateSelectedBar3();
+  updateSelectAllBtn3();
+}}
+
+function toggleAllBasic3() {{
+  if (selectedBasic3.length === BASIC_DOCS.length) {{
+    selectedBasic3 = [];
+    BASIC_DOCS.forEach(function(_, i) {{
+      var el = document.getElementById('basicItem3_' + i);
+      if (el) {{ el.classList.remove('checked'); el.querySelector('input').checked = false; }}
+    }});
+  }} else {{
+    selectedBasic3 = BASIC_DOCS.map(function(_, i) {{ return i; }});
+    BASIC_DOCS.forEach(function(_, i) {{
+      var el = document.getElementById('basicItem3_' + i);
+      if (el) {{ el.classList.add('checked'); el.querySelector('input').checked = true; }}
+    }});
+  }}
+  updateSelectedBar3();
+  updateSelectAllBtn3();
+}}
+
+function updateSelectAllBtn3() {{
+  var btn = document.getElementById('selectAllBtn3');
+  btn.textContent = selectedBasic3.length === BASIC_DOCS.length ? '전체 해제' : '전체 선택';
+}}
+
+function removeBasic3(idx) {{
+  selectedBasic3 = selectedBasic3.filter(function(x) {{ return x !== idx; }});
+  var el = document.getElementById('basicItem3_' + idx);
+  if (el) {{ el.classList.remove('checked'); el.querySelector('input').checked = false; }}
+  updateSelectedBar3();
+  updateSelectAllBtn3();
+}}
+
+function updateSelectedBar3() {{
+  var bar = document.getElementById('selectedBar3');
+  if (!selectedBasic3.length) {{
+    bar.className = 'selected-bar empty';
+    bar.textContent = '선택된 서류가 없습니다';
+    return;
+  }}
+  bar.className = 'selected-bar';
+  bar.innerHTML = '';
+  selectedBasic3.forEach(function(idx) {{
+    var tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = BASIC_DOCS[idx] + ' ';
+    var btn = document.createElement('button');
+    btn.textContent = '×';
+    (function(i) {{
+      btn.addEventListener('click', function(e) {{ e.stopPropagation(); removeBasic3(i); }});
+    }})(idx);
+    tag.appendChild(btn);
+    bar.appendChild(tag);
+  }});
+}}
+
 function submitBasic() {{
   var email = document.getElementById('emailInput3').value.trim();
+  if (!selectedBasic3.length) {{ alert('서류를 1개 이상 선택해주세요.'); return; }}
   if (!email || !/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
   document.getElementById('submitBtn3').disabled = true;
   document.getElementById('loading3').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'basic', email: email}})
+    body: JSON.stringify({{mode: 'basic', doc_indices: selectedBasic3, email: email}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1233,7 +1356,7 @@ function submitBasic() {{
       document.getElementById('main3').style.display = 'none';
       document.getElementById('success3').style.display = 'block';
       document.getElementById('successMsg3').innerHTML =
-        '회사 기본서류 ' + d.file_count + '개<br><br>📧 ' + email + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
+        '기본서류 ' + d.file_count + '개<br><br>📧 ' + email + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
     }} else {{
       alert('오류: ' + (d.error || ''));
       document.getElementById('submitBtn3').disabled = false;
@@ -1249,6 +1372,7 @@ function submitBasic() {{
 
 renderList1(ALL_PRODUCTS);
 renderList2(ALL_PRODUCTS);
+initBasic3();
 </script>
 </body>
 </html>"""
@@ -1265,32 +1389,43 @@ def api_request():
         return jsonify({"ok": False, "error": "올바른 이메일 주소를 입력해주세요"}), 400
 
     if mode == "basic":
+        doc_indices = data.get("doc_indices", [])
+        if doc_indices:
+            doc_labels = [COMPANY_DOCS_LIST[i]["label"] for i in doc_indices if i < len(COMPANY_DOCS_LIST)]
+        else:
+            doc_labels = [d["label"] for d in COMPANY_DOCS_LIST]
+        file_count = len(doc_labels)
         def process_basic():
             try:
-                url = create_basic_zip()
-                send_email_basic(email, url)
+                url = create_basic_zip(doc_indices if doc_indices else None)
+                send_email_basic(email, url, doc_labels)
             except Exception as e:
                 print(f"[api/request basic 오류] {e}")
         threading.Thread(target=process_basic, daemon=True).start()
-        return jsonify({"ok": True, "file_count": len(COMPANY_DOCS_LIST)})
+        return jsonify({"ok": True, "file_count": file_count})
 
     if mode == "specific":
-        product     = data.get("product", "")
-        doc_indices = data.get("doc_indices", [])
-        if not product or product not in DOCUMENT_MAP:
-            return jsonify({"ok": False, "error": "유효한 품목이 없습니다"}), 400
-        if not doc_indices:
+        selections = data.get("selections", [])
+        if not selections:
             return jsonify({"ok": False, "error": "서류를 선택해주세요"}), 400
-        docs       = DOCUMENT_MAP[product]
-        doc_labels = [docs[i].get("type", "파일") for i in doc_indices if i < len(docs)]
+        for sel in selections:
+            if not sel.get("product") or sel["product"] not in DOCUMENT_MAP:
+                return jsonify({"ok": False, "error": f'품목을 찾을 수 없습니다: {sel.get("product", "")}'}), 400
+        summary    = []
+        file_count = 0
+        for sel in selections:
+            docs   = DOCUMENT_MAP[sel["product"]]
+            labels = [docs[i].get("type", "파일") for i in sel["doc_indices"] if i < len(docs)]
+            summary.append({"product": sel["product"], "labels": labels})
+            file_count += len(sel["doc_indices"])
         def process_specific():
             try:
-                url = create_specific_zip(product, doc_indices)
-                send_email_specific(email, product, doc_labels, url)
+                url = create_specific_zip(selections)
+                send_email_specific(email, summary, url)
             except Exception as e:
                 print(f"[api/request specific 오류] {e}")
         threading.Thread(target=process_specific, daemon=True).start()
-        return jsonify({"ok": True, "file_count": len(doc_indices)})
+        return jsonify({"ok": True, "file_count": file_count})
 
     # mode == "all"
     products = data.get("products", [])
