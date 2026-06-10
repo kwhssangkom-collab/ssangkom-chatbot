@@ -735,18 +735,34 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 var ALL_PRODUCTS = {products_json};
 var selected = [];
 
+var listEl = null;
+
 function renderList(products) {{
-  var list = document.getElementById('productList');
+  listEl = listEl || document.getElementById('productList');
+  listEl.innerHTML = '';
   if (!products.length) {{
-    list.innerHTML = '<div class="no-result">검색 결과가 없습니다</div>';
+    var empty = document.createElement('div');
+    empty.className = 'no-result';
+    empty.textContent = '검색 결과가 없습니다';
+    listEl.appendChild(empty);
     return;
   }}
-  list.innerHTML = products.map(function(p) {{
-    var chk = selected.indexOf(p) !== -1;
-    return '<div class="product-item' + (chk ? ' checked' : '') + '" onclick="toggleProduct(' + JSON.stringify(p) + ')">'
-      + '<input type="checkbox"' + (chk ? ' checked' : '') + ' onclick="event.stopPropagation();toggleProduct(' + JSON.stringify(p) + ')">'
-      + '<label>' + p + '</label></div>';
-  }}).join('');
+  products.forEach(function(p) {{
+    var div = document.createElement('div');
+    div.className = 'product-item' + (selected.indexOf(p) !== -1 ? ' checked' : '');
+
+    var chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.checked = selected.indexOf(p) !== -1;
+
+    var lbl = document.createElement('label');
+    lbl.textContent = p;
+
+    div.appendChild(chk);
+    div.appendChild(lbl);
+    div.addEventListener('click', function() {{ toggleProduct(p); }});
+    listEl.appendChild(div);
+  }});
 }}
 
 function filterProducts() {{
@@ -773,19 +789,27 @@ function updateSelectedBar() {{
   var bar = document.getElementById('selectedBar');
   if (!selected.length) {{
     bar.className = 'selected-bar empty';
-    bar.innerHTML = '선택된 품목이 없습니다';
+    bar.textContent = '선택된 품목이 없습니다';
     return;
   }}
   bar.className = 'selected-bar';
-  bar.innerHTML = selected.map(function(p) {{
-    return '<span class="tag">' + p + '<button onclick="removeProduct(' + JSON.stringify(p) + ')">×</button></span>';
-  }}).join('');
+  bar.innerHTML = '';
+  selected.forEach(function(p) {{
+    var tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = p + ' ';
+    var btn = document.createElement('button');
+    btn.textContent = '×';
+    btn.addEventListener('click', function(e) {{ e.stopPropagation(); removeProduct(p); }});
+    tag.appendChild(btn);
+    bar.appendChild(tag);
+  }});
 }}
 
 function submitRequest() {{
   var email = document.getElementById('emailInput').value.trim();
   if (!selected.length) {{ alert('품목을 1개 이상 선택해주세요.'); return; }}
-  if (!email || !/^[\\w.-]+@[\\w.-]+\\.\\w{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
+  if (!email || !/^[\w.-]+@[\w.-]+\.\w{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
 
   document.getElementById('submitBtn').disabled = true;
   document.getElementById('loading').style.display = 'block';
@@ -799,7 +823,8 @@ function submitRequest() {{
   .then(function(d) {{
     if (d.ok) {{
       document.getElementById('main').style.display = 'none';
-      document.getElementById('success').style.display = 'block';
+      var suc = document.getElementById('success');
+      suc.style.display = 'block';
       document.getElementById('successMsg').innerHTML =
         '<b>' + selected.join(', ') + '</b><br>총 ' + d.file_count + '개 파일<br><br>📧 ' + email + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
     }} else {{
