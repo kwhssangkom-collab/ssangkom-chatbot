@@ -9,6 +9,7 @@ import json
 import os
 import re
 import threading
+import urllib.parse
 import uuid
 import zipfile
 from datetime import datetime, timedelta
@@ -111,6 +112,22 @@ def search_products(query: str, top_n: int = 5) -> list[str]:
 # ZIP 생성 & 임시 링크
 # ═══════════════════════════════════════════════════
 
+def _parse_cd_filename(cd_header: str) -> str | None:
+    """Content-Disposition 헤더에서 파일명 추출 (RFC 5987 filename* 우선)"""
+    if not cd_header:
+        return None
+    m = re.search(r"filename\*\s*=\s*([^;]+)", cd_header, re.IGNORECASE)
+    if m:
+        val = m.group(1).strip()
+        if "''" in val:
+            _, _, encoded = val.partition("''")
+            return urllib.parse.unquote(encoded.strip(), encoding="utf-8")
+    m = re.search(r'filename\s*=\s*"?([^";]+)"?', cd_header, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    return None
+
+
 def create_zip(product_names: list[str]) -> str:
     """품목들의 파일을 ZIP으로 묶고 임시 다운로드 URL 반환"""
     zip_buffer = io.BytesIO()
@@ -118,14 +135,26 @@ def create_zip(product_names: list[str]) -> str:
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for product in product_names:
             docs = DOCUMENT_MAP.get(product, [])
+            safe_folder = re.sub(r'[/\\:*?"<>|]', '', product)
             for i, doc in enumerate(docs, 1):
                 try:
                     resp = requests.get(doc["url"], headers=HEADERS, timeout=20)
-                    if resp.status_code == 200:
+                    if resp.status_code != 200:
+                        print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {doc['url']}")
+                        continue
+                    # Incapsula JS 챌린지 감지: PDF 서명(%PDF)이 없으면 건너뜀
+                    if not resp.content.startswith(b"%PDF"):
+                        print(f"PDF가 아닌 응답 수신 (건너뜀): {doc['url']} - 첫 bytes: {resp.content[:40]}")
+                        continue
+                    # Content-Disposition에서 실제 파일명 추출
+                    cd = resp.headers.get("Content-Disposition", "")
+                    real_name = _parse_cd_filename(cd)
+                    if real_name:
+                        safe_filename = re.sub(r'[/\\:*?"<>|]', '', real_name)
+                    else:
                         doc_type = doc.get("type", "파일")
-                        safe_name = re.sub(r'[/\\:*?"<>|]', '', product)
-                        filename = f"{safe_name}/{doc_type}_{i}.pdf"
-                        zf.writestr(filename, resp.content)
+                        safe_filename = f"{doc_type}_{i}.pdf"
+                    zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
                 except Exception as e:
                     print(f"파일 다운로드 실패: {doc['url']} - {e}")
 
@@ -650,6 +679,30 @@ def test_email():
         result["send"] = "error"
         result["error"] = str(e)
     return jsonify(result)
+
+
+@app.route("/test-dispatch")
+def test_dispatch():
+    """dispatch URL이 실제 PDF를 반환하는지 진단"""
+    test_url = "https://ssangkom.co.kr/description/download_dispatch.php?d=12"
+    try:
+        resp = requests.get(test_url, headers=HEADERS, timeout=20)
+        content_type = resp.headers.get("Content-Type", "")
+        cd = resp.headers.get("Content-Disposition", "")
+        first_bytes = resp.content[:20].hex()
+        is_pdf = resp.content.startswith(b"%PDF")
+        real_name = _parse_cd_filename(cd)
+        return jsonify({
+            "status_code": resp.status_code,
+            "content_type": content_type,
+            "content_disposition": cd,
+            "first_bytes_hex": first_bytes,
+            "is_pdf": is_pdf,
+            "parsed_filename": real_name,
+            "content_length": len(resp.content),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 @app.route("/health")
