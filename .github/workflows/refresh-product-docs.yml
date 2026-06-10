@@ -1,0 +1,33 @@
+name: Refresh Product Docs
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'   # 매주 월요일 00:00 UTC (09:00 KST)
+  workflow_dispatch:        # 수동 실행
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install requests
+
+      - name: Download latest product docs
+        run: python sync_product_docs.py --force
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add product-docs document_map.json
+          if git diff --cached --quiet; then
+            echo "변경 없음"
+          else
+            git commit -m "chore: refresh product docs $(date -u +%Y-%m-%d)"
+            git push
+          fi

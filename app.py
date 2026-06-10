@@ -138,22 +138,27 @@ def create_zip(product_names: list[str]) -> str:
             safe_folder = re.sub(r'[/\\:*?"<>|]', '', product)
             for i, doc in enumerate(docs, 1):
                 try:
-                    resp = requests.get(doc["url"], headers=HEADERS, timeout=20)
+                    # github_url 캐시 우선 사용 (Incapsula 우회)
+                    fetch_url = doc.get("github_url") or doc["url"]
+                    resp = requests.get(fetch_url, headers=HEADERS, timeout=20)
                     if resp.status_code != 200:
-                        print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {doc['url']}")
+                        print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {fetch_url}")
                         continue
-                    # Incapsula JS 챌린지 감지: PDF 서명(%PDF)이 없으면 건너뜀
+                    # PDF 서명 확인
                     if not resp.content.startswith(b"%PDF"):
-                        print(f"PDF가 아닌 응답 수신 (건너뜀): {doc['url']} - 첫 bytes: {resp.content[:40]}")
+                        print(f"PDF가 아닌 응답 수신 (건너뜀): {fetch_url} - 첫 bytes: {resp.content[:40]}")
                         continue
-                    # Content-Disposition에서 실제 파일명 추출
-                    cd = resp.headers.get("Content-Disposition", "")
-                    real_name = _parse_cd_filename(cd)
-                    if real_name:
-                        safe_filename = re.sub(r'[/\\:*?"<>|]', '', real_name)
+                    # 파일명 결정: 캐시된 filename → Content-Disposition → 타입+인덱스
+                    if doc.get("filename"):
+                        safe_filename = re.sub(r'[/\\:*?"<>|]', '', doc["filename"])
                     else:
-                        doc_type = doc.get("type", "파일")
-                        safe_filename = f"{doc_type}_{i}.pdf"
+                        cd = resp.headers.get("Content-Disposition", "")
+                        real_name = _parse_cd_filename(cd)
+                        if real_name:
+                            safe_filename = re.sub(r'[/\\:*?"<>|]', '', real_name)
+                        else:
+                            doc_type = doc.get("type", "파일")
+                            safe_filename = f"{doc_type}_{i}.pdf"
                     zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
                 except Exception as e:
                     print(f"파일 다운로드 실패: {doc['url']} - {e}")
