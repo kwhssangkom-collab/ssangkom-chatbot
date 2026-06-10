@@ -1327,7 +1327,7 @@ function renderDocs2(docs) {{
 
     var prev = document.createElement('a');
     prev.className = 'doc-preview';
-    prev.textContent = '미리보기';
+    prev.textContent = '파일 열어보기';
     prev.target = '_blank';
     prev.rel = 'noopener';
     prev.href = '/preview?product=' + encodeURIComponent(focusedProduct2) + '&index=' + doc.index;
