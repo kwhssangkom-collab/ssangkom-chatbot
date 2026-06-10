@@ -20,7 +20,7 @@ from email.mime.text import MIMEText
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, Response
 
 load_dotenv()
 
@@ -640,6 +640,214 @@ def admin_send_test():
         return jsonify({"ok": True, "products": valid, "email": email, "download_url": download_url})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════
+# 웹뷰 승인서류 요청 페이지
+# ═══════════════════════════════════════════════════
+
+@app.route("/request")
+def request_page():
+    products_json = json.dumps(PRODUCT_NAMES, ensure_ascii=False)
+    html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>쌍곰 승인서류 요청</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
+.header{{background:#003389;padding:16px 20px;display:flex;align-items:center;gap:12px}}
+.header img{{height:32px}}
+.header span{{color:#fff;font-size:17px;font-weight:700}}
+.section{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
+.section-title{{font-size:13px;font-weight:700;color:#003389;letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase}}
+.search-wrap{{position:relative}}
+.search-wrap input{{width:100%;padding:11px 16px 11px 40px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;font-family:inherit;outline:none;transition:.2s}}
+.search-wrap input:focus{{border-color:#003389}}
+.search-icon{{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#aaa;font-size:16px}}
+.selected-bar{{background:#eef2fb;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:13px;color:#003389;font-weight:600;min-height:38px;display:flex;align-items:center;flex-wrap:wrap;gap:6px}}
+.selected-bar.empty{{color:#aaa;font-weight:400}}
+.tag{{background:#003389;color:#fff;border-radius:20px;padding:3px 10px;font-size:12px;display:flex;align-items:center;gap:4px}}
+.tag button{{background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1;padding:0}}
+.product-list{{max-height:320px;overflow-y:auto;border:1.5px solid #dde3ef;border-radius:8px;margin-top:10px}}
+.product-item{{display:flex;align-items:center;padding:11px 14px;border-bottom:1px solid #f0f3f8;cursor:pointer;transition:.15s}}
+.product-item:last-child{{border-bottom:none}}
+.product-item:hover{{background:#f4f7ff}}
+.product-item.checked{{background:#eef2fb}}
+.product-item input[type=checkbox]{{width:18px;height:18px;accent-color:#003389;margin-right:12px;flex-shrink:0;cursor:pointer}}
+.product-item label{{font-size:15px;color:#1a1a1a;cursor:pointer;line-height:1.4}}
+.no-result{{text-align:center;padding:24px;color:#aaa;font-size:14px}}
+.email-input{{width:100%;padding:12px 16px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;font-family:inherit;outline:none;transition:.2s}}
+.email-input:focus{{border-color:#003389}}
+.submit-btn{{width:100%;padding:15px;background:#003389;color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit;transition:.2s}}
+.submit-btn:active{{background:#002270}}
+.submit-btn:disabled{{background:#aaa;cursor:not-allowed}}
+.hint{{font-size:12px;color:#999;margin-top:6px;text-align:center}}
+#success{{display:none;text-align:center;padding:40px 20px}}
+#success .icon{{font-size:56px;margin-bottom:16px}}
+#success h2{{color:#003389;font-size:20px;margin-bottom:8px}}
+#success p{{color:#666;font-size:14px;line-height:1.7}}
+.loading{{display:none;text-align:center;padding:16px;color:#003389;font-size:14px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="쌍곰">
+  <span>승인서류 요청</span>
+</div>
+
+<div id="main">
+  <!-- 품목 선택 -->
+  <div class="section">
+    <div class="section-title">품목 선택</div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="품목명 검색..." oninput="filterProducts()">
+    </div>
+    <div class="selected-bar empty" id="selectedBar">선택된 품목이 없습니다</div>
+    <div class="product-list" id="productList"></div>
+  </div>
+
+  <!-- 이메일 입력 -->
+  <div class="section">
+    <div class="section-title">수신 이메일</div>
+    <input type="email" class="email-input" id="emailInput" placeholder="example@company.com">
+  </div>
+
+  <!-- 발송 버튼 -->
+  <div class="section">
+    <button class="submit-btn" id="submitBtn" onclick="submitRequest()">승인서류 발송 요청</button>
+    <p class="hint">요청 후 수분 내 이메일로 ZIP 파일이 발송됩니다</p>
+    <div class="loading" id="loading">⏳ 처리 중입니다...</div>
+  </div>
+</div>
+
+<div id="success">
+  <div class="icon">✅</div>
+  <h2>발송 요청 완료!</h2>
+  <p id="successMsg"></p>
+</div>
+
+<script>
+var ALL_PRODUCTS = {products_json};
+var selected = [];
+
+function renderList(products) {{
+  var list = document.getElementById('productList');
+  if (!products.length) {{
+    list.innerHTML = '<div class="no-result">검색 결과가 없습니다</div>';
+    return;
+  }}
+  list.innerHTML = products.map(function(p) {{
+    var chk = selected.indexOf(p) !== -1;
+    return '<div class="product-item' + (chk ? ' checked' : '') + '" onclick="toggleProduct(' + JSON.stringify(p) + ')">'
+      + '<input type="checkbox"' + (chk ? ' checked' : '') + ' onclick="event.stopPropagation();toggleProduct(' + JSON.stringify(p) + ')">'
+      + '<label>' + p + '</label></div>';
+  }}).join('');
+}}
+
+function filterProducts() {{
+  var q = document.getElementById('searchInput').value.trim().toLowerCase();
+  var filtered = q ? ALL_PRODUCTS.filter(function(p) {{ return p.toLowerCase().indexOf(q) !== -1; }}) : ALL_PRODUCTS;
+  renderList(filtered);
+}}
+
+function toggleProduct(p) {{
+  var idx = selected.indexOf(p);
+  if (idx === -1) selected.push(p);
+  else selected.splice(idx, 1);
+  updateSelectedBar();
+  filterProducts();
+}}
+
+function removeProduct(p) {{
+  selected = selected.filter(function(x) {{ return x !== p; }});
+  updateSelectedBar();
+  filterProducts();
+}}
+
+function updateSelectedBar() {{
+  var bar = document.getElementById('selectedBar');
+  if (!selected.length) {{
+    bar.className = 'selected-bar empty';
+    bar.innerHTML = '선택된 품목이 없습니다';
+    return;
+  }}
+  bar.className = 'selected-bar';
+  bar.innerHTML = selected.map(function(p) {{
+    return '<span class="tag">' + p + '<button onclick="removeProduct(' + JSON.stringify(p) + ')">×</button></span>';
+  }}).join('');
+}}
+
+function submitRequest() {{
+  var email = document.getElementById('emailInput').value.trim();
+  if (!selected.length) {{ alert('품목을 1개 이상 선택해주세요.'); return; }}
+  if (!email || !/^[\\w.-]+@[\\w.-]+\\.\\w{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
+
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('loading').style.display = 'block';
+
+  fetch('/api/request', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{products: selected, email: email}})
+  }})
+  .then(function(r) {{ return r.json(); }})
+  .then(function(d) {{
+    if (d.ok) {{
+      document.getElementById('main').style.display = 'none';
+      document.getElementById('success').style.display = 'block';
+      document.getElementById('successMsg').innerHTML =
+        '<b>' + selected.join(', ') + '</b><br>총 ' + d.file_count + '개 파일<br><br>📧 ' + email + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
+    }} else {{
+      alert('오류가 발생했습니다: ' + (d.error || ''));
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('loading').style.display = 'none';
+    }}
+  }})
+  .catch(function() {{
+    alert('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('loading').style.display = 'none';
+  }});
+}}
+
+renderList(ALL_PRODUCTS);
+</script>
+</body>
+</html>"""
+    return Response(html, mimetype="text/html; charset=utf-8")
+
+
+@app.route("/api/request", methods=["POST"])
+def api_request():
+    data = request.json or {}
+    products = data.get("products", [])
+    email    = data.get("email", "").strip()
+
+    if not products:
+        return jsonify({"ok": False, "error": "품목을 선택해주세요"}), 400
+    if not email or not re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", email):
+        return jsonify({"ok": False, "error": "올바른 이메일 주소를 입력해주세요"}), 400
+
+    valid = [p for p in products if p in DOCUMENT_MAP]
+    if not valid:
+        return jsonify({"ok": False, "error": "유효한 품목이 없습니다"}), 400
+
+    file_count = sum(len(DOCUMENT_MAP.get(p, [])) for p in valid)
+
+    def process():
+        try:
+            download_url = create_zip(valid)
+            send_email(email, valid, download_url)
+        except Exception as e:
+            print(f"[api/request 오류] {e}")
+
+    threading.Thread(target=process, daemon=True).start()
+    return jsonify({"ok": True, "file_count": file_count})
 
 
 # ═══════════════════════════════════════════════════
