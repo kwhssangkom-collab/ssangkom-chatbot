@@ -941,6 +941,11 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .doc-item.checked{{background:#eef2fb}}
 .doc-item input[type=checkbox]{{width:18px;height:18px;accent-color:#003389;margin-right:12px;flex-shrink:0;cursor:pointer}}
 .doc-item label{{font-size:15px;color:#1a1a1a;line-height:1.4;flex:1}}
+.doc-main{{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}}
+.doc-name{{font-size:13.5px;color:#1a1a1a;line-height:1.4;word-break:break-all}}
+.doc-type-badge{{align-self:flex-start;background:#eef2fb;color:#003389;font-size:10.5px;font-weight:700;border-radius:5px;padding:1px 7px}}
+.doc-preview{{flex-shrink:0;margin-left:10px;color:#003389;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #c5d2ee;border-radius:6px;padding:6px 10px;background:#f4f7ff;white-space:nowrap}}
+.doc-preview:hover{{background:#e6edff}}
 </style>
 </head>
 <body>
@@ -952,7 +957,7 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 
 <div class="tabs">
   <div class="tab active" id="tab1" onclick="switchTab(1)">품목별<br>전체</div>
-  <div class="tab" id="tab2" onclick="switchTab(2)">서류<br>직접선택</div>
+  <div class="tab" id="tab2" onclick="switchTab(2)">개별서류<br>직접선택</div>
   <div class="tab" id="tab3" onclick="switchTab(3)">기본서류<br>선택</div>
 </div>
 
@@ -1091,6 +1096,7 @@ function renderChips(chipsId, countId, items, emptyText) {{
     chip.className = 'chip';
     var txt = document.createElement('span');
     txt.textContent = it.text;
+    txt.title = it.title || it.text;
     chip.appendChild(txt);
     var btn = document.createElement('button');
     btn.innerHTML = '&times;';
@@ -1303,23 +1309,43 @@ function renderDocs2(docs) {{
     }});
     var div = document.createElement('div');
     div.className = 'doc-item' + (already ? ' checked' : '');
+
     var chk = document.createElement('input');
     chk.type = 'checkbox';
     chk.checked = already;
-    var lbl = document.createElement('label');
-    lbl.textContent = doc.type;
+
+    var main = document.createElement('div');
+    main.className = 'doc-main';
+    var name = document.createElement('span');
+    name.className = 'doc-name';
+    name.textContent = doc.name || doc.type;
+    var badge = document.createElement('span');
+    badge.className = 'doc-type-badge';
+    badge.textContent = doc.type;
+    main.appendChild(name);
+    main.appendChild(badge);
+
+    var prev = document.createElement('a');
+    prev.className = 'doc-preview';
+    prev.textContent = '미리보기';
+    prev.target = '_blank';
+    prev.rel = 'noopener';
+    prev.href = '/preview?product=' + encodeURIComponent(focusedProduct2) + '&index=' + doc.index;
+    prev.addEventListener('click', function(e) {{ e.stopPropagation(); }});
+
     div.appendChild(chk);
-    div.appendChild(lbl);
+    div.appendChild(main);
+    div.appendChild(prev);
     (function(d, el, c) {{
       el.addEventListener('click', function() {{
-        toggleDoc2(focusedProduct2, d.index, d.type, el, c);
+        toggleDoc2(focusedProduct2, d.index, d.type, d.name, el, c);
       }});
     }})(doc, div, chk);
     listEl.appendChild(div);
   }});
 }}
 
-function toggleDoc2(product, docIndex, docType, div, chk) {{
+function toggleDoc2(product, docIndex, docType, docName, div, chk) {{
   var pos = -1;
   for (var i = 0; i < selectedItems2.length; i++) {{
     if (selectedItems2[i].product === product && selectedItems2[i].docIndex === docIndex) {{
@@ -1327,7 +1353,7 @@ function toggleDoc2(product, docIndex, docType, div, chk) {{
     }}
   }}
   if (pos === -1) {{
-    selectedItems2.push({{product: product, docIndex: docIndex, docType: docType}});
+    selectedItems2.push({{product: product, docIndex: docIndex, docType: docType, docName: docName}});
     div.classList.add('checked');
     chk.checked = true;
   }} else {{
@@ -1350,8 +1376,10 @@ function removeItem2(product, docIndex) {{
 
 function updateSelectedBar2() {{
   var items = selectedItems2.map(function(item) {{
+    var label = item.docName || item.docType;
     return {{
-      text: item.product + ' · ' + item.docType,
+      text: item.product + ' · ' + label,
+      title: item.product + ' · ' + label + ' [' + item.docType + ']',
       remove: function() {{ removeItem2(item.product, item.docIndex); }}
     }};
   }});
@@ -1593,6 +1621,14 @@ def api_request():
     return jsonify({"ok": True, "file_count": file_count})
 
 
+def _doc_display_name(doc: dict) -> str:
+    """서류의 사람이 읽을 수 있는 이름. filename 우선, 없으면 type."""
+    fn = doc.get("filename")
+    if fn:
+        return re.sub(r"\.pdf$", "", fn, flags=re.IGNORECASE).strip()
+    return doc.get("type", "파일")
+
+
 @app.route("/api/product-docs", methods=["POST"])
 def api_product_docs():
     data    = request.json or {}
@@ -1603,8 +1639,41 @@ def api_product_docs():
     return jsonify({
         "ok": True,
         "product": product,
-        "docs": [{"index": i, "type": doc.get("type", "파일")} for i, doc in enumerate(docs)]
+        "docs": [
+            {"index": i, "type": doc.get("type", "파일"), "name": _doc_display_name(doc)}
+            for i, doc in enumerate(docs)
+        ]
     })
+
+
+@app.route("/preview")
+def preview_doc():
+    """선택한 서류 PDF를 브라우저에서 인라인으로 미리보기."""
+    product = request.args.get("product", "")
+    try:
+        idx = int(request.args.get("index", "-1"))
+    except (TypeError, ValueError):
+        idx = -1
+    docs = DOCUMENT_MAP.get(product, [])
+    if not (0 <= idx < len(docs)):
+        return "서류를 찾을 수 없습니다", 404
+    doc = docs[idx]
+    fetch_url = doc.get("github_url") or doc.get("url")
+    if not fetch_url:
+        return "미리보기 주소가 없습니다", 404
+    try:
+        resp = requests.get(fetch_url, headers=HEADERS, timeout=20)
+    except Exception:
+        return "미리보기를 불러올 수 없습니다", 502
+    if resp.status_code != 200 or not resp.content.startswith(b"%PDF"):
+        return "미리보기를 불러올 수 없습니다", 502
+    fname = doc.get("filename") or f"{doc.get('type', '파일')}.pdf"
+    quoted = urllib.parse.quote(fname)
+    return Response(
+        resp.content,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{quoted}"},
+    )
 
 
 # ═══════════════════════════════════════════════════
