@@ -860,7 +860,7 @@ def request_page():
             f'<input type="text" class="email-domain" id="emailDomain{n}" placeholder="도메인" autocomplete="off" oninput="clearEmailStatus({n})" onblur="checkEmail({n})">'
             '</div>'
             f'<select class="email-select" id="emailSel{n}" onchange="pickDomain({n})">'
-            f'<option value="">자주 쓰는 도메인 선택 / 직접입력</option>{domain_opts}</select>'
+            f'<option value="">직접입력</option>{domain_opts}</select>'
             f'<div class="email-status" id="emailStatus{n}"></div>'
         )
 
