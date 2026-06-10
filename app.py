@@ -620,6 +620,29 @@ def download_zip(file_id: str):
 
 
 # ═══════════════════════════════════════════════════
+# 관리자 테스트 발송
+# ═══════════════════════════════════════════════════
+
+@app.route("/admin/send-test", methods=["POST"])
+def admin_send_test():
+    """관리자용: 품목 + 이메일 지정해서 즉시 발송 테스트"""
+    data = request.json or {}
+    products = data.get("products", [])
+    email    = data.get("email", "")
+    if not products or not email:
+        return jsonify({"error": "products와 email 필요"}), 400
+    valid = [p for p in products if p in DOCUMENT_MAP]
+    if not valid:
+        return jsonify({"error": "품목을 찾을 수 없음", "products": products}), 404
+    try:
+        download_url = create_zip(valid)
+        send_email(email, valid, download_url)
+        return jsonify({"ok": True, "products": valid, "email": email, "download_url": download_url})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════
 # 상태 확인 (배포 후 서버 동작 확인용)
 # ═══════════════════════════════════════════════════
 
