@@ -348,7 +348,7 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
             <td style="padding:28px 36px 0;">
               <p style="color:#333;font-size:16px;line-height:1.95;margin:0;">
                 안녕하세요.<br>
-                요청하신 품목별 승인서류의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>
+                요청하신 품목별 기술자료의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>
                 아래 버튼을 클릭하시면 파일을 즉시 다운로드하실 수 있습니다.
               </p>
             </td>
@@ -382,7 +382,7 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
                         text-decoration:none;font-size:17px;font-weight:700;
                         padding:17px 52px;border-radius:8px;letter-spacing:0.1px;
                         box-shadow:0 4px 14px rgba(0,51,137,0.28);">
-                &#9660;&nbsp; 승인서류 다운로드
+                &#9660;&nbsp; 기술자료 다운로드
               </a>
               <p style="margin:12px 0 0;font-size:13px;color:#666;text-align:center;">
                 ※ 링크 유효기간: 발송 후 24시간
@@ -469,7 +469,7 @@ def send_email_specific(to_email: str, product: str, doc_labels: list, download_
           <p style="color:#fff;font-size:24px;font-weight:700;margin:0;line-height:1.4;letter-spacing:-0.3px;">기술자료 이메일 송부</p>
         </td></tr>
         <tr><td style="padding:28px 36px 0;">
-          <p style="color:#333;font-size:16px;line-height:1.95;margin:0;">안녕하세요.<br>요청하신 품목별 승인서류의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>아래 버튼을 클릭하시면 파일을 즉시 다운로드하실 수 있습니다.</p>
+          <p style="color:#333;font-size:16px;line-height:1.95;margin:0;">안녕하세요.<br>요청하신 품목별 기술자료의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>아래 버튼을 클릭하시면 파일을 즉시 다운로드하실 수 있습니다.</p>
         </td></tr>
         <tr><td style="padding:20px 36px 0;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
@@ -482,7 +482,7 @@ def send_email_specific(to_email: str, product: str, doc_labels: list, download_
           </table>
         </td></tr>
         <tr><td style="padding:24px 36px 8px;text-align:center;">
-          <a href="{download_url}" style="display:inline-block;background:#003389;color:#fff;text-decoration:none;font-size:17px;font-weight:700;padding:17px 52px;border-radius:8px;box-shadow:0 4px 14px rgba(0,51,137,0.28);">&#9660;&nbsp; 승인서류 다운로드</a>
+          <a href="{download_url}" style="display:inline-block;background:#003389;color:#fff;text-decoration:none;font-size:17px;font-weight:700;padding:17px 52px;border-radius:8px;box-shadow:0 4px 14px rgba(0,51,137,0.28);">&#9660;&nbsp; 기술자료 다운로드</a>
           <p style="margin:12px 0 0;font-size:13px;color:#666;text-align:center;">※ 링크 유효기간: 발송 후 24시간</p>
         </td></tr>
         <tr><td style="padding:20px 36px 28px;">
@@ -776,7 +776,7 @@ def download_zip(file_id: str):
     return send_file(
         zip_path,
         as_attachment=True,
-        download_name="승인서류.zip",
+        download_name="기술자료.zip",
         mimetype="application/zip"
     )
 
@@ -820,12 +820,12 @@ def request_page():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>쌍곰 승인서류 요청</title>
+<title>쌍곰 기술자료 요청</title>
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
 .header{{background:#003389;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
-.header img{{height:36px}}
+.header img{{height:44px;filter:brightness(0) invert(1)}}
 .header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .tabs{{display:flex;background:#fff;border-bottom:2px solid #e0e6f0;position:sticky;top:0;z-index:10}}
 .tab{{flex:1;padding:13px 6px;text-align:center;font-size:12px;font-weight:600;color:#888;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.2s;line-height:1.35}}
@@ -879,12 +879,12 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 <body>
 
 <div class="header">
-  <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="쌍곰">
-  <span>승인서류 요청</span>
+  <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM">
+  <span>기술자료 요청</span>
 </div>
 
 <div class="tabs">
-  <div class="tab active" id="tab1" onclick="switchTab(1)">전체<br>승인서류</div>
+  <div class="tab active" id="tab1" onclick="switchTab(1)">전체<br>기술자료</div>
   <div class="tab" id="tab2" onclick="switchTab(2)">특정<br>서류 선택</div>
   <div class="tab" id="tab3" onclick="switchTab(3)">기본서류</div>
 </div>
@@ -906,7 +906,7 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
       <input type="email" class="email-input" id="emailInput1" placeholder="example@company.com">
     </div>
     <div class="section">
-      <button class="submit-btn" id="submitBtn1" onclick="submitAll()">승인서류 발송 요청</button>
+      <button class="submit-btn" id="submitBtn1" onclick="submitAll()">기술자료 발송 요청</button>
       <p class="hint">요청 후 수분 내 이메일로 ZIP 파일이 발송됩니다</p>
       <div class="loading" id="loading1">⏳ 처리 중입니다...</div>
     </div>
@@ -1361,7 +1361,7 @@ def guide_page():
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
 .header{{background:#003389;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
-.header img{{height:36px}}
+.header img{{height:44px;filter:brightness(0) invert(1)}}
 .header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .badge{{display:inline-block;background:#003389;color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:20px;margin-bottom:12px}}
@@ -1379,14 +1379,14 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 </head>
 <body>
 <div class="header">
-  <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="쌍곰">
+  <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM">
   <span>서비스 이용안내</span>
 </div>
 
 <div class="section">
   <span class="badge">기능 1</span>
-  <h3>전체 승인서류 요청</h3>
-  <p>원하는 품목을 선택하면 해당 품목의 모든 승인서류를 이메일 ZIP 파일로 발송해 드립니다. 여러 품목 동시 선택 가능합니다.</p>
+  <h3>전체 기술자료 요청</h3>
+  <p>원하는 품목을 선택하면 해당 품목의 모든 기술자료를 이메일 ZIP 파일로 발송해 드립니다. 여러 품목 동시 선택 가능합니다.</p>
   <ul class="step-list">
     <li><span class="step-num">1</span><span>품목명을 검색하거나 목록에서 선택 (다중 선택 가능)</span></li>
     <li><span class="step-num">2</span><span>수신 이메일 주소 입력</span></li>
