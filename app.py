@@ -854,13 +854,10 @@ def request_page():
 
     def email_block(n: int) -> str:
         return (
-            '<div class="email-row">'
-            f'<input type="text" class="email-local" id="emailLocal{n}" placeholder="이메일 아이디" autocomplete="off" oninput="clearEmailStatus({n})">'
-            '<span class="email-at">@</span>'
-            f'<input type="text" class="email-domain" id="emailDomain{n}" placeholder="도메인" autocomplete="off" oninput="clearEmailStatus({n})" onblur="checkEmail({n})">'
-            '</div>'
+            f'<input type="email" class="email-input" id="email{n}" placeholder="example@company.com" '
+            f'autocomplete="email" oninput="clearEmailStatus({n})" onblur="checkEmail({n})">'
             f'<select class="email-select" id="emailSel{n}" onchange="pickDomain({n})">'
-            f'<option value="">직접입력</option>{domain_opts}</select>'
+            f'<option value="">도메인 빠른선택</option>{domain_opts}</select>'
             f'<div class="email-status" id="emailStatus{n}"></div>'
         )
 
@@ -912,10 +909,8 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .product-item label{{font-size:15px;color:#1a1a1a;cursor:pointer;line-height:1.4;flex:1}}
 .count-badge{{display:inline-block;background:#003389;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}}
 .no-result{{text-align:center;padding:24px;color:#aaa;font-size:14px}}
-.email-row{{display:flex;align-items:center;gap:8px}}
-.email-local,.email-domain{{flex:1;min-width:0;padding:12px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;font-family:inherit;outline:none;transition:.2s}}
-.email-at{{color:#888;font-weight:700;flex-shrink:0}}
-.email-local:focus,.email-domain:focus{{border-color:#003389}}
+.email-input{{width:100%;padding:12px 14px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;font-family:inherit;outline:none;transition:.2s}}
+.email-input:focus{{border-color:#003389}}
 .email-select{{width:100%;margin-top:8px;padding:11px 12px;border:1.5px solid #dde3ef;border-radius:8px;font-size:14px;font-family:inherit;background:#fff;color:#444;outline:none;cursor:pointer}}
 .email-select:focus{{border-color:#003389}}
 .email-status{{font-size:12.5px;margin-top:8px;min-height:17px;font-weight:500}}
@@ -1108,18 +1103,19 @@ function renderChips(chipsId, countId, items, emptyText) {{
 
 // ── 공통: 이메일 입력 ─────────────────────────
 function getEmail(n) {{
-  var l = document.getElementById('emailLocal' + n).value.trim();
-  var d = document.getElementById('emailDomain' + n).value.trim();
-  if (!l || !d) return '';
-  return l + '@' + d;
+  return document.getElementById('email' + n).value.trim();
 }}
 
 function pickDomain(n) {{
   var sel = document.getElementById('emailSel' + n);
-  var inp = document.getElementById('emailDomain' + n);
-  if (sel.value) {{ inp.value = sel.value; }}
-  else {{ inp.value = ''; inp.focus(); }}
+  if (!sel.value) return;
+  var inp = document.getElementById('email' + n);
+  var v = inp.value.trim();
+  var local = v.indexOf('@') !== -1 ? v.split('@')[0] : v;
+  inp.value = local + '@' + sel.value;
+  sel.selectedIndex = 0;   // '도메인 빠른선택'으로 리셋
   checkEmail(n);
+  inp.focus();
 }}
 
 function clearEmailStatus(n) {{
