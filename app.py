@@ -1110,7 +1110,9 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .tab{{flex:1;padding:13px 6px;text-align:center;font-size:12px;font-weight:600;color:#888;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.2s;line-height:1.35}}
 .tab.active{{color:#003389;border-bottom-color:#003389}}
 .notice{{background:#f0f4ff;border-left:3px solid #003389;margin:12px 12px 0;border-radius:8px;padding:11px 16px}}
-.notice p{{font-size:12px;color:#555;line-height:1.8;margin:0}}
+.notice p{{font-size:12px;color:#555;line-height:1.7;margin:0;padding-left:13px;position:relative}}
+.notice p::before{{content:"•";position:absolute;left:0;color:#003389;font-weight:700}}
+.notice p + p{{margin-top:3px}}
 .tab-content{{display:none}}
 .tab-content.active{{display:block}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
@@ -1195,7 +1197,9 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 </div>
 
 <div class="notice">
-  <p>&#8226; 기술자료 관련 문의사항은 <strong>기술연구소</strong>로 문의해 주시기 바랍니다.<br>&#8226; 기술자료는 홈페이지에 업로드된 자료를 기반으로 발송됩니다.<br>&#8226; <strong>품목별 전체</strong> / <strong>서류 직접선택</strong> 발송 시 회사 <strong>기본서류 다운로드 버튼</strong>이 기본적으로 이메일에 함께 발송되며, <strong>기술자료 다운로드 링크는 발송 후 24시간 동안만 유효</strong>합니다.</p>
+  <p>기술자료 관련 문의사항은 <strong>기술연구소</strong>로 문의해 주시기 바랍니다.</p>
+  <p>기술자료는 홈페이지에 업로드된 자료를 기반으로 발송됩니다.</p>
+  <p><strong>품목별 전체</strong>·<strong>서류 직접선택</strong> 발송 시 기본서류 버튼이 함께 발송되며, 다운로드 링크는 발송 후 <strong>24시간만 유효</strong>합니다.</p>
 </div>
 
 <!-- ── Tab 1: 품목별 전체 ── -->
