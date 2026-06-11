@@ -713,6 +713,42 @@ def _log_send(**fields):
         print(f"[send_logs 기록 실패] {e}")
 
 
+def _log_pending(mode, email, requester, kakao, ip, summary, requested):
+    """요청 접수 시점에 '처리중' 기록을 남기고 row id 반환 (완료 시 갱신용)."""
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return None
+    try:
+        r = requests.post(
+            f"{SUPABASE_URL}/rest/v1/send_logs",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+                     "Content-Type": "application/json", "Prefer": "return=representation"},
+            json={"email": email, "requester": requester, "kakao_user_id": kakao, "mode": mode,
+                  "summary": summary, "files_requested": requested, "files_actual": 0,
+                  "status": "처리중", "client_ip": ip},
+            timeout=8,
+        )
+        if r.status_code in (200, 201):
+            arr = r.json()
+            return arr[0]["id"] if arr else None
+    except Exception as e:
+        print(f"[send_logs pending 실패] {e}")
+    return None
+
+
+def _update_log(log_id, fields):
+    if not (SUPABASE_URL and SUPABASE_KEY and log_id):
+        return
+    try:
+        requests.patch(
+            f"{SUPABASE_URL}/rest/v1/send_logs?id=eq.{log_id}",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+                     "Content-Type": "application/json", "Prefer": "return=minimal"},
+            json=fields, timeout=8,
+        )
+    except Exception as e:
+        print(f"[send_logs update 실패] {e}")
+
+
 def _alert_admin(subject: str, body_text: str):
     """발송 실패/부분발송 시 관리자에게 경고 메일."""
     to = ADMIN_EMAIL
@@ -792,10 +828,12 @@ def guide_response() -> dict:
                 {"simpleText": {"text": text}},
                 {"basicCard": {
                     "title": "기술자료 요청",
-                    "description": "아래 버튼을 눌러 요청 페이지로 이동하세요.",
+                    "description": "아래 버튼을 눌러 요청 또는 발송 확인을 진행하세요.",
                     "buttons": [
                         {"action": "webLink", "label": "기술자료 요청하기",
-                         "webLinkUrl": f"{SERVER_BASE_URL}/request"}
+                         "webLinkUrl": f"{SERVER_BASE_URL}/request"},
+                        {"action": "webLink", "label": "발송 확인하기",
+                         "webLinkUrl": f"{SERVER_BASE_URL}/status"}
                     ]
                 }}
             ]
@@ -811,14 +849,17 @@ def menu_redirect_response() -> dict:
             "outputs": [
                 {"simpleText": {"text":
                     "이 채널은 아래 버튼으로 이용해 주세요. 🙂\n\n"
-                    "‘기술자료 요청하기’ 버튼을 누르시면 기술자료를 이메일로 받으실 수 있습니다.\n"
-                    "사용 방법이 궁금하시면 하단 메뉴의 ‘이용안내’를 눌러주세요."}},
+                    "• 기술자료 요청하기 — 기술자료를 이메일로 받기\n"
+                    "• 발송 확인하기 — 요청한 자료가 발송됐는지 확인\n\n"
+                    "사용 방법이 궁금하시면 ‘이용안내’라고 입력해 주세요."}},
                 {"basicCard": {
-                    "title": "기술자료 요청",
-                    "description": "버튼을 눌러 요청 페이지로 이동하세요.",
+                    "title": "기술자료 요청 / 발송 확인",
+                    "description": "버튼을 눌러 진행하세요.",
                     "buttons": [
                         {"action": "webLink", "label": "기술자료 요청하기",
-                         "webLinkUrl": f"{SERVER_BASE_URL}/request"}
+                         "webLinkUrl": f"{SERVER_BASE_URL}/request"},
+                        {"action": "webLink", "label": "발송 확인하기",
+                         "webLinkUrl": f"{SERVER_BASE_URL}/status"}
                     ]
                 }}
             ]
@@ -964,7 +1005,7 @@ def admin_logs():
     n_fail = sum(1 for x in rows if x.get("status") == "failed")
 
     def badge(s):
-        c = {"success": "#1a7f37", "partial": "#b7791f", "failed": "#dc2f3a"}.get(s, "#888")
+        c = {"success": "#1a7f37", "partial": "#b7791f", "failed": "#dc2f3a", "처리중": "#888"}.get(s, "#888")
         t = {"success": "성공", "partial": "부분", "failed": "실패"}.get(s, _esc(s) or "-")
         return f'<span style="background:{c};color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700">{t}</span>'
 
@@ -972,7 +1013,7 @@ def admin_logs():
     for x in rows:
         ts   = _esc(x.get("created_at", ""))[:19].replace("T", " ")
         cnt  = f'{x.get("files_actual", "?")}/{x.get("files_requested", "?")}'
-        warn = "" if x.get("files_actual") == x.get("files_requested") else ' style="color:#dc2f3a;font-weight:700"'
+        warn = ' style="color:#dc2f3a;font-weight:700"' if (x.get("status") in ("partial", "failed")) else ""
         link = x.get("download_url") or ""
         link_html = f'<a href="{_esc(link)}" target="_blank">열기</a>' if link.startswith("http") else "-"
         trs += (
@@ -1737,14 +1778,18 @@ def api_check_email():
     return jsonify({"ok": True, "valid": valid, "reason": reason})
 
 
-def _record_send(mode, email, requester, kakao, ip, summary, requested, actual, status, url, err=""):
-    """발송 결과를 기록(send_logs)하고, 실패/부분발송이면 관리자에게 경고."""
-    _log_send(email=email, requester=requester, kakao_user_id=kakao, mode=mode,
-              summary=summary, files_requested=requested, files_actual=actual,
-              status=status, download_url=url, client_ip=ip, error=err)
+def _finish_send(log_id, mode, email, requester, kakao, ip, summary, requested, actual, status, url, err=""):
+    """발송 완료 시 '처리중' 기록을 결과로 갱신(없으면 신규 기록), 실패/부분이면 관리자 경고."""
+    fields = {"status": status, "files_actual": actual, "download_url": url, "error": err}
+    if log_id:
+        _update_log(log_id, fields)
+    else:
+        _log_send(email=email, requester=requester, kakao_user_id=kakao, mode=mode,
+                  summary=summary, files_requested=requested, files_actual=actual,
+                  status=status, download_url=url, client_ip=ip, error=err)
     if status != "success":
         _alert_admin(
-            f"{status.upper()} · {email}",
+            f"{status} · {email}",
             f"상태: {status}\n요청자: {requester or '-'}\n이메일: {email}\n모드: {mode}\n"
             f"내용: {summary}\n요청 {requested}건 / 실제 {actual}건\nIP: {ip}\n"
             f"카톡ID: {kakao or '-'}\n오류: {err or '-'}"
@@ -1778,6 +1823,7 @@ def api_request():
             doc_labels = [d["label"] for d in COMPANY_DOCS_LIST]
         file_count = len(doc_labels)
         summary = ", ".join(doc_labels)
+        log_id = _log_pending("basic", email, requester, kakao, client_ip, summary, file_count)
         def process_basic():
             url = ""; actual = 0; status = "success"; err = ""
             try:
@@ -1788,7 +1834,7 @@ def api_request():
             except Exception as e:
                 status = "failed"; err = str(e)
                 print(f"[api/request basic 오류] {e}")
-            _record_send("basic", email, requester, kakao, client_ip,
+            _finish_send(log_id, "basic", email, requester, kakao, client_ip,
                          summary, file_count, actual, status, url, err)
         threading.Thread(target=process_basic, daemon=True).start()
         return jsonify({"ok": True, "file_count": file_count})
@@ -1814,6 +1860,7 @@ def api_request():
         if not selections:
             return jsonify({"ok": False, "error": "유효한 서류가 없습니다"}), 400
         summary_text = "; ".join(f"{s['product']}: " + ", ".join(s["labels"]) for s in summary)
+        log_id = _log_pending("specific", email, requester, kakao, client_ip, summary_text, file_count)
         def process_specific():
             url = ""; actual = 0; status = "success"; err = ""
             try:
@@ -1824,7 +1871,7 @@ def api_request():
             except Exception as e:
                 status = "failed"; err = str(e)
                 print(f"[api/request specific 오류] {e}")
-            _record_send("specific", email, requester, kakao, client_ip,
+            _finish_send(log_id, "specific", email, requester, kakao, client_ip,
                          summary_text, file_count, actual, status, url, err)
         threading.Thread(target=process_specific, daemon=True).start()
         return jsonify({"ok": True, "file_count": file_count})
@@ -1838,6 +1885,7 @@ def api_request():
         return jsonify({"ok": False, "error": "유효한 품목이 없습니다"}), 400
     file_count = sum(len(DOCUMENT_MAP.get(p, [])) for p in valid)
     summary = ", ".join(valid)
+    log_id = _log_pending("all", email, requester, kakao, client_ip, summary, file_count)
     def process_all():
         url = ""; actual = 0; status = "success"; err = ""
         try:
@@ -1848,7 +1896,7 @@ def api_request():
         except Exception as e:
             status = "failed"; err = str(e)
             print(f"[api/request all 오류] {e}")
-        _record_send("all", email, requester, kakao, client_ip,
+        _finish_send(log_id, "all", email, requester, kakao, client_ip,
                      summary, file_count, actual, status, url, err)
     threading.Thread(target=process_all, daemon=True).start()
     return jsonify({"ok": True, "file_count": file_count})
@@ -1922,6 +1970,98 @@ def preview_doc():
         mimetype=ctype,
         headers={"Content-Disposition": f"{disp}; filename*=UTF-8''{quoted}"},
     )
+
+
+@app.route("/status")
+def status_page():
+    """영업사원/요청자용: 발송받은 이메일로 본인 요청의 처리 상태 조회."""
+    email = (request.args.get("email") or "").strip()
+    rows = []
+    searched = bool(email)
+    if email and re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", email) and SUPABASE_URL and SUPABASE_KEY:
+        try:
+            q = urllib.parse.quote(email)
+            r = requests.get(
+                f"{SUPABASE_URL}/rest/v1/send_logs?select=*&email=eq.{q}&order=created_at.desc&limit=20",
+                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                timeout=10,
+            )
+            if r.status_code == 200:
+                rows = r.json()
+        except Exception as e:
+            print(f"[status 조회 실패] {e}")
+
+    def sbadge(s):
+        m = {"처리중": ("#6b7280", "처리 중"), "success": ("#1a7f37", "발송 완료"),
+             "partial": ("#b7791f", "일부 누락"), "failed": ("#dc2f3a", "발송 실패")}
+        c, t = m.get(s, ("#888", _esc(s) or "-"))
+        return f'<span style="background:{c};color:#fff;border-radius:14px;padding:3px 12px;font-size:13px;font-weight:700">{t}</span>'
+
+    cards = ""
+    for x in rows:
+        ts   = _esc(x.get("created_at", ""))[:16].replace("T", " ")
+        cnt  = f'{x.get("files_actual", 0)}/{x.get("files_requested", 0)}'
+        link = x.get("download_url") or ""
+        link_html = (f'<a class="dl" href="{_esc(link)}" target="_blank">📥 파일 다시 받기</a>'
+                     if link.startswith("http") else
+                     ('<span class="muted">처리 중…</span>' if x.get("status") == "처리중"
+                      else '<span class="muted">링크 없음</span>'))
+        cards += (
+            '<div class="card">'
+            f'<div class="row1"><span class="ts">{ts}</span>{sbadge(x.get("status"))}</div>'
+            f'<div class="sum">{_esc(x.get("summary"))}</div>'
+            f'<div class="row2"><span class="files">파일 {cnt}</span>{link_html}</div>'
+            '</div>'
+        )
+    if searched and not rows:
+        cards = ('<div class="empty">해당 이메일로 접수된 요청이 없습니다.<br>'
+                 '이메일 주소가 정확한지 확인해 주세요. (발송받기로 입력한 주소)</div>')
+
+    intro = "" if searched else ('<div class="empty">발송받으신 <b>이메일 주소</b>를 입력하면 '
+                                 '최근 요청의 처리 상태를 확인할 수 있습니다.</div>')
+
+    html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>기술자료 발송 확인</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
+.header{{background:#003389;padding:20px;text-align:center}}
+.header img{{height:34px;filter:brightness(0) invert(1)}}
+.header div{{color:#fff;font-size:17px;font-weight:700;margin-top:8px}}
+.search{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
+.search label{{font-size:13px;font-weight:700;color:#003389;display:block;margin-bottom:8px}}
+.search form{{display:flex;gap:8px}}
+.search input{{flex:1;min-width:0;padding:12px 14px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;outline:none;font-family:inherit}}
+.search input:focus{{border-color:#003389}}
+.search button{{flex-shrink:0;padding:0 18px;background:#003389;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}}
+.list{{padding:0 12px 24px}}
+.card{{background:#fff;border-radius:12px;padding:15px 16px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.06)}}
+.row1{{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}}
+.ts{{font-size:12px;color:#888}}
+.sum{{font-size:14px;color:#1a1a1a;line-height:1.5;word-break:break-all;margin-bottom:10px}}
+.row2{{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f0f3f8;padding-top:10px}}
+.files{{font-size:13px;color:#555;font-weight:600}}
+.dl{{font-size:13px;color:#003389;font-weight:700;text-decoration:none;border:1.5px solid #003389;border-radius:8px;padding:7px 12px}}
+.muted{{font-size:13px;color:#aaa}}
+.empty{{background:#fff;margin:12px;border-radius:12px;padding:28px 20px;text-align:center;color:#777;font-size:14px;line-height:1.7;box-shadow:0 1px 6px rgba(0,0,0,.06)}}
+.note{{font-size:12px;color:#999;text-align:center;padding:4px 20px 20px;line-height:1.7}}
+</style></head><body>
+<div class="header">
+  <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM">
+  <div>기술자료 발송 확인</div>
+</div>
+<div class="search">
+  <label>발송받은 이메일 주소</label>
+  <form method="get" action="/status">
+    <input type="email" name="email" value="{_esc(email)}" placeholder="example@company.com" autocomplete="off">
+    <button type="submit">조회</button>
+  </form>
+</div>
+<div class="list">{intro}{cards}</div>
+<div class="note">※ 다운로드 링크는 발송 후 24시간 동안 유효합니다.<br>※ 문의: 담당 영업사원 또는 기술상담실(080-768-3030)</div>
+</body></html>"""
+    return Response(html, mimetype="text/html; charset=utf-8")
 
 
 # ═══════════════════════════════════════════════════
