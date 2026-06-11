@@ -767,6 +767,42 @@ def list_card_response(title: str, items: list[str], message: str) -> dict:
     }
 
 
+def guide_response() -> dict:
+    """기술자료 요청 이용안내 메시지 + 요청 페이지 버튼."""
+    text = (
+        "📌 기술자료 요청 이용안내\n\n"
+        "쌍곰 기술자료(MSDS·시험성적서·인증서 등)를 이메일로 받아보실 수 있습니다.\n\n"
+        "▣ 요청 방법\n"
+        "① 아래 ‘기술자료 요청하기’ 버튼을 누릅니다.\n"
+        "② 화면 상단 3가지 방식 중 선택\n"
+        "  • 품목별 전체 — 품목 선택 시 해당 품목의 모든 자료\n"
+        "  • 개별서류 직접선택 — 품목에서 특정 서류만 골라서\n"
+        "  • 기본서류 선택 — 사업자등록증·납세증명 등 회사 기본서류\n"
+        "③ 받으실 이메일을 입력하고 발송 요청\n\n"
+        "▣ 유의사항\n"
+        "• 다운로드 링크는 발송 후 24시간 동안 유효합니다.\n"
+        "• 이메일 주소를 정확히 입력해 주세요(도메인 자동 확인).\n"
+        "• ‘품목별 전체’·‘개별서류’ 발송 시 회사 기본서류 다운로드 버튼이 함께 발송됩니다.\n"
+        "• 관련 문의: 담당 영업사원 또는 기술상담실(080-768-3030)"
+    )
+    return {
+        "version": "2.0",
+        "template": {
+            "outputs": [
+                {"simpleText": {"text": text}},
+                {"basicCard": {
+                    "title": "기술자료 요청",
+                    "description": "아래 버튼을 눌러 요청 페이지로 이동하세요.",
+                    "buttons": [
+                        {"action": "webLink", "label": "기술자료 요청하기",
+                         "webLinkUrl": f"{SERVER_BASE_URL}/request"}
+                    ]
+                }}
+            ]
+        }
+    }
+
+
 # ═══════════════════════════════════════════════════
 # 웹훅 메인 핸들러
 # ═══════════════════════════════════════════════════
@@ -781,6 +817,11 @@ def webhook():
         return jsonify(text_response("요청을 처리할 수 없습니다. 다시 시도해주세요."))
 
     session = sessions.get(user_id, {"step": "search"})
+
+    # ── 이용안내 ───────────────────────────────────
+    if utterance in ["이용안내", "이용 안내", "사용방법", "사용 방법", "사용법", "도움말", "안내"]:
+        sessions.pop(user_id, None)
+        return jsonify(guide_response())
 
     # ── 취소 명령 ──────────────────────────────────
     if utterance in ["취소", "처음", "다시", "초기화"]:
@@ -866,7 +907,7 @@ def webhook():
         email = utterance
 
         # 이메일 형식 검증
-        if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", email):
+        if not re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", email):
             return jsonify(text_response(
                 "올바른 이메일 주소 형식이 아닙니다.\n예: example@company.com\n\n이메일 주소를 다시 입력해주세요."
             ))
@@ -877,7 +918,7 @@ def webhook():
         # ZIP 생성 및 이메일 발송 (백그라운드)
         def process():
             try:
-                download_url = create_zip(products)
+                download_url, _ = create_zip(products)
                 send_email(email, products, download_url)
                 print(f"[완료] {email} -> {products}")
             except Exception as e:
