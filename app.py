@@ -49,6 +49,8 @@ LINK_TTL_SECONDS = 86400  # 24시간
 
 # 관리자 엔드포인트 보호 (미설정 시 /admin/* 비활성 — fail-closed)
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+# 발송 실패/부분발송 경고를 받을 관리자 이메일 (미설정 시 발송 계정으로)
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL") or os.getenv("GMAIL_USER")
 
 # 발송 남용 방지: IP 레이트리밋 + ZIP 동시 생성 제한(OOM 방지)
 RATE_PER_MIN  = int(os.getenv("RATE_PER_MIN", "5"))
@@ -254,10 +256,11 @@ def _parse_cd_filename(cd_header: str) -> str | None:
     return None
 
 
-def create_zip(product_names: list[str]) -> str:
-    """품목들의 파일을 ZIP으로 묶고 임시 다운로드 URL 반환 (디스크 스트리밍)"""
+def create_zip(product_names: list[str]):
+    """품목들의 파일을 ZIP으로 묶고 (다운로드 URL, 실제 담긴 파일수) 반환 (디스크 스트리밍)"""
     file_id  = str(uuid.uuid4())
     zip_path = os.path.join(TEMP_DIR, f"{file_id}.zip")
+    added    = 0
     with _zip_semaphore:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for product in product_names:
@@ -287,10 +290,11 @@ def create_zip(product_names: list[str]) -> str:
                                 doc_type = doc.get("type", "파일")
                                 safe_filename = f"{doc_type}_{i}.pdf"
                         zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
+                        added += 1
                     except Exception as e:
                         print(f"파일 다운로드 실패: {doc['url']} - {e}")
 
-    return _finalize_zip(file_id, zip_path)
+    return _finalize_zip(file_id, zip_path), added
 
 
 def _cleanup(path: str, file_id: str):
@@ -339,10 +343,11 @@ def _finalize_zip(file_id: str, zip_path: str) -> str:
     return f"{SERVER_BASE_URL}/download/{file_id}"
 
 
-def create_specific_zip(selections: list) -> str:
-    """selections: [{"product": str, "doc_indices": list[int]}, ...]"""
+def create_specific_zip(selections: list):
+    """selections: [{"product": str, "doc_indices": list[int]}, ...] → (URL, 실제 파일수)"""
     file_id  = str(uuid.uuid4())
     zip_path = os.path.join(TEMP_DIR, f"{file_id}.zip")
+    added    = 0
     with _zip_semaphore:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for sel in selections:
@@ -374,19 +379,21 @@ def create_specific_zip(selections: list) -> str:
                                 doc_type = doc.get("type", "파일")
                                 safe_filename = f"{doc_type}_{idx + 1}.pdf"
                         zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
+                        added += 1
                     except Exception as e:
                         print(f"파일 다운로드 실패: {doc.get('url', '')} - {e}")
-    return _finalize_zip(file_id, zip_path)
+    return _finalize_zip(file_id, zip_path), added
 
 
-def create_basic_zip(doc_indices: list = None) -> str:
-    """doc_indices: None or [] = 전체, list[int] = 특정 서류만"""
+def create_basic_zip(doc_indices: list = None):
+    """doc_indices: None or [] = 전체, list[int] = 특정 서류만 → (URL, 실제 파일수)"""
     if doc_indices:
         docs = [COMPANY_DOCS_LIST[i] for i in doc_indices if 0 <= i < len(COMPANY_DOCS_LIST)]
     else:
         docs = COMPANY_DOCS_LIST
     file_id  = str(uuid.uuid4())
     zip_path = os.path.join(TEMP_DIR, f"{file_id}.zip")
+    added    = 0
     with _zip_semaphore:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for doc in docs:
@@ -395,9 +402,10 @@ def create_basic_zip(doc_indices: list = None) -> str:
                     if resp.status_code == 200:
                         filename = f"{doc['label']}.{doc['ext']}"
                         zf.writestr(filename, resp.content)
+                        added += 1
                 except Exception as e:
                     print(f"기본서류 다운로드 실패: {doc['url']} - {e}")
-    return _finalize_zip(file_id, zip_path)
+    return _finalize_zip(file_id, zip_path), added
 
 
 # ═══════════════════════════════════════════════════
@@ -690,6 +698,35 @@ def send_email_basic(to_email: str, download_url: str, doc_labels: list = None):
     _send_mail(to_email, f"[{COMPANY_NAME}] 기본서류 이메일 송부", html)
 
 
+def _log_send(**fields):
+    """발송 기록을 Supabase send_logs에 저장 (service_role 필요). 실패해도 발송엔 무영향."""
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return
+    try:
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/send_logs",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+                     "Content-Type": "application/json", "Prefer": "return=minimal"},
+            json=fields, timeout=8,
+        )
+    except Exception as e:
+        print(f"[send_logs 기록 실패] {e}")
+
+
+def _alert_admin(subject: str, body_text: str):
+    """발송 실패/부분발송 시 관리자에게 경고 메일."""
+    to = ADMIN_EMAIL
+    if not to:
+        return
+    try:
+        safe = body_text.replace("<", "&lt;").replace(">", "&gt;")
+        html = (f"<div style='font-family:monospace;font-size:13px;line-height:1.7;"
+                f"white-space:pre-wrap;color:#222'>{safe}</div>")
+        _send_mail(to, f"[쌍곰봇 경고] {subject}", html)
+    except Exception as e:
+        print(f"[관리자 알림 실패] {e}")
+
+
 # ═══════════════════════════════════════════════════
 # 카카오 응답 헬퍼
 # ═══════════════════════════════════════════════════
@@ -946,11 +983,110 @@ def admin_send_test():
     if not valid:
         return jsonify({"error": "품목을 찾을 수 없음", "products": products}), 404
     try:
-        download_url = create_zip(valid)
+        download_url, _ = create_zip(valid)
         send_email(email, valid, download_url)
         return jsonify({"ok": True, "products": valid, "email": email, "download_url": download_url})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+def _esc(v) -> str:
+    s = str(v if v is not None else "")
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+@app.route("/admin/logs")
+def admin_logs():
+    """발송 요청 기록 조회 (ADMIN_TOKEN 필요). 예: /admin/logs?token=XXXX"""
+    token = request.args.get("token", "")
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return "unauthorized", 403
+
+    rows = []
+    if SUPABASE_URL and SUPABASE_KEY:
+        try:
+            r = requests.get(
+                f"{SUPABASE_URL}/rest/v1/send_logs?select=*&order=created_at.desc&limit=300",
+                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                timeout=10,
+            )
+            if r.status_code == 200:
+                rows = r.json()
+            else:
+                print(f"[admin/logs 조회 {r.status_code}] {r.text[:150]}")
+        except Exception as e:
+            print(f"[admin/logs 조회 실패] {e}")
+
+    n_ok   = sum(1 for x in rows if x.get("status") == "success")
+    n_part = sum(1 for x in rows if x.get("status") == "partial")
+    n_fail = sum(1 for x in rows if x.get("status") == "failed")
+
+    def badge(s):
+        c = {"success": "#1a7f37", "partial": "#b7791f", "failed": "#dc2f3a"}.get(s, "#888")
+        t = {"success": "성공", "partial": "부분", "failed": "실패"}.get(s, _esc(s) or "-")
+        return f'<span style="background:{c};color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700">{t}</span>'
+
+    trs = ""
+    for x in rows:
+        ts   = _esc(x.get("created_at", ""))[:19].replace("T", " ")
+        cnt  = f'{x.get("files_actual", "?")}/{x.get("files_requested", "?")}'
+        warn = "" if x.get("files_actual") == x.get("files_requested") else ' style="color:#dc2f3a;font-weight:700"'
+        link = x.get("download_url") or ""
+        link_html = f'<a href="{_esc(link)}" target="_blank">열기</a>' if link.startswith("http") else "-"
+        trs += (
+            "<tr>"
+            f"<td class='nowrap'>{ts}</td>"
+            f"<td>{badge(x.get('status'))}</td>"
+            f"<td>{_esc(x.get('requester'))}</td>"
+            f"<td class='nowrap'>{_esc(x.get('email'))}</td>"
+            f"<td>{_esc(x.get('mode'))}</td>"
+            f"<td class='sum'>{_esc(x.get('summary'))}</td>"
+            f"<td{warn}>{cnt}</td>"
+            f"<td>{link_html}</td>"
+            f"<td class='nowrap'>{_esc(x.get('client_ip'))}</td>"
+            f"<td class='err'>{_esc(x.get('error'))}</td>"
+            "</tr>"
+        )
+    if not rows:
+        trs = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999">기록이 없습니다</td></tr>'
+
+    html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>쌍곰봇 발송 기록</title>
+<style>
+*{{box-sizing:border-box}} body{{margin:0;font-family:'Malgun Gothic',sans-serif;background:#f0f3f8;color:#222}}
+.top{{background:#003389;color:#fff;padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}}
+.top h1{{font-size:18px;margin:0}}
+.stat{{font-size:13px;background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px}}
+.wrap{{padding:14px;overflow-x:auto}}
+table{{border-collapse:collapse;width:100%;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);font-size:13px}}
+th,td{{padding:9px 11px;border-bottom:1px solid #eef1f6;text-align:left;vertical-align:top}}
+th{{background:#f4f7fd;color:#003389;font-size:12px;letter-spacing:.4px;position:sticky;top:0}}
+tr:hover td{{background:#f9fbff}}
+.nowrap{{white-space:nowrap}}
+.sum{{max-width:320px;font-size:12px;color:#444;word-break:break-all}}
+.err{{max-width:200px;font-size:11px;color:#dc2f3a;word-break:break-all}}
+a{{color:#003389}}
+.refresh{{margin-left:auto;color:#fff;font-size:13px;text-decoration:none;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:8px}}
+</style></head><body>
+<div class="top">
+  <h1>📋 발송 기록</h1>
+  <span class="stat">총 {len(rows)}</span>
+  <span class="stat">성공 {n_ok}</span>
+  <span class="stat">부분 {n_part}</span>
+  <span class="stat">실패 {n_fail}</span>
+  <a class="refresh" href="/admin/logs?token={_esc(token)}">새로고침</a>
+</div>
+<div class="wrap">
+<table>
+<thead><tr>
+<th>시각(UTC)</th><th>상태</th><th>요청자</th><th>이메일</th><th>모드</th><th>내용</th><th>파일(실/요청)</th><th>링크</th><th>IP</th><th>오류</th>
+</tr></thead>
+<tbody>{trs}</tbody>
+</table>
+</div>
+</body></html>"""
+    return Response(html, mimetype="text/html; charset=utf-8")
 
 
 # ═══════════════════════════════════════════════════
@@ -1071,6 +1207,11 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
   <p>&#8226; 기술자료 관련 문의사항은 <strong>기술연구소</strong>로 문의해 주시기 바랍니다.<br>&#8226; 기술자료는 홈페이지에 업로드된 자료를 기반으로 발송됩니다.<br>&#8226; <strong>품목별 전체</strong> / <strong>서류 직접선택</strong> 발송 시 회사 <strong>기본서류 다운로드 버튼</strong>이 기본적으로 이메일에 함께 발송됩니다.</p>
 </div>
 
+<div class="section">
+  <div class="section-title">요청자 (선택)</div>
+  <input type="text" class="email-input" id="requester" placeholder="이름 또는 회사명 — 요청 기록용">
+</div>
+
 <!-- ── Tab 1: 품목별 전체 ── -->
 <div class="tab-content active" id="content1">
   <div id="main1">
@@ -1176,6 +1317,11 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 <script>
 var ALL_PRODUCTS = {products_json};
 var BASIC_DOCS   = {basic_docs_json};
+var KAKAO_UID    = new URLSearchParams(location.search).get('u') || '';
+
+function getRequester() {{
+  return document.getElementById('requester').value.trim();
+}}
 
 function switchTab(n) {{
   for (var i = 1; i <= 3; i++) {{
@@ -1327,7 +1473,7 @@ function submitAll() {{
   document.getElementById('loading1').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'all', products: selected1, email: email}})
+    body: JSON.stringify({{mode: 'all', products: selected1, email: email, requester: getRequester(), kakao_user_id: KAKAO_UID}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1509,7 +1655,7 @@ function submitSpecific() {{
   document.getElementById('loading2').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'specific', selections: selections, email: email}})
+    body: JSON.stringify({{mode: 'specific', selections: selections, email: email, requester: getRequester(), kakao_user_id: KAKAO_UID}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1616,7 +1762,7 @@ function submitBasic() {{
   document.getElementById('loading3').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'basic', doc_indices: selectedBasic3, email: email}})
+    body: JSON.stringify({{mode: 'basic', doc_indices: selectedBasic3, email: email, requester: getRequester(), kakao_user_id: KAKAO_UID}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1658,6 +1804,20 @@ def api_check_email():
     return jsonify({"ok": True, "valid": valid, "reason": reason})
 
 
+def _record_send(mode, email, requester, kakao, ip, summary, requested, actual, status, url, err=""):
+    """발송 결과를 기록(send_logs)하고, 실패/부분발송이면 관리자에게 경고."""
+    _log_send(email=email, requester=requester, kakao_user_id=kakao, mode=mode,
+              summary=summary, files_requested=requested, files_actual=actual,
+              status=status, download_url=url, client_ip=ip, error=err)
+    if status != "success":
+        _alert_admin(
+            f"{status.upper()} · {email}",
+            f"상태: {status}\n요청자: {requester or '-'}\n이메일: {email}\n모드: {mode}\n"
+            f"내용: {summary}\n요청 {requested}건 / 실제 {actual}건\nIP: {ip}\n"
+            f"카톡ID: {kakao or '-'}\n오류: {err or '-'}"
+        )
+
+
 @app.route("/api/request", methods=["POST"])
 def api_request():
     if _rate_limited():
@@ -1666,12 +1826,15 @@ def api_request():
     data  = request.json or {}
     mode  = data.get("mode", "all")
     email = data.get("email", "").strip()
+    requester = (data.get("requester") or "").strip()[:100]
+    kakao     = (data.get("kakao_user_id") or "").strip()[:100]
+    client_ip = _client_ip()
 
     if not email or not re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", email):
         return jsonify({"ok": False, "error": "올바른 이메일 주소를 입력해주세요"}), 400
 
-    valid, reason = verify_email_domain(email)
-    if not valid:
+    ok_domain, reason = verify_email_domain(email)
+    if not ok_domain:
         return jsonify({"ok": False, "error": reason or "존재하지 않는 이메일 도메인입니다. 주소를 다시 확인해주세요."}), 400
 
     if mode == "basic":
@@ -1681,12 +1844,19 @@ def api_request():
         else:
             doc_labels = [d["label"] for d in COMPANY_DOCS_LIST]
         file_count = len(doc_labels)
+        summary = ", ".join(doc_labels)
         def process_basic():
+            url = ""; actual = 0; status = "success"; err = ""
             try:
-                url = create_basic_zip(doc_indices if doc_indices else None)
+                url, actual = create_basic_zip(doc_indices if doc_indices else None)
                 send_email_basic(email, url, doc_labels)
+                if actual < file_count:
+                    status = "partial"
             except Exception as e:
+                status = "failed"; err = str(e)
                 print(f"[api/request basic 오류] {e}")
+            _record_send("basic", email, requester, kakao, client_ip,
+                         summary, file_count, actual, status, url, err)
         threading.Thread(target=process_basic, daemon=True).start()
         return jsonify({"ok": True, "file_count": file_count})
 
@@ -1710,12 +1880,19 @@ def api_request():
             file_count += len(idxs)
         if not selections:
             return jsonify({"ok": False, "error": "유효한 서류가 없습니다"}), 400
+        summary_text = "; ".join(f"{s['product']}: " + ", ".join(s["labels"]) for s in summary)
         def process_specific():
+            url = ""; actual = 0; status = "success"; err = ""
             try:
-                url = create_specific_zip(selections)
+                url, actual = create_specific_zip(selections)
                 send_email_specific(email, summary, url)
+                if actual < file_count:
+                    status = "partial"
             except Exception as e:
+                status = "failed"; err = str(e)
                 print(f"[api/request specific 오류] {e}")
+            _record_send("specific", email, requester, kakao, client_ip,
+                         summary_text, file_count, actual, status, url, err)
         threading.Thread(target=process_specific, daemon=True).start()
         return jsonify({"ok": True, "file_count": file_count})
 
@@ -1727,12 +1904,19 @@ def api_request():
     if not valid:
         return jsonify({"ok": False, "error": "유효한 품목이 없습니다"}), 400
     file_count = sum(len(DOCUMENT_MAP.get(p, [])) for p in valid)
+    summary = ", ".join(valid)
     def process_all():
+        url = ""; actual = 0; status = "success"; err = ""
         try:
-            url = create_zip(valid)
+            url, actual = create_zip(valid)
             send_email(email, valid, url)
+            if actual < file_count:
+                status = "partial"
         except Exception as e:
+            status = "failed"; err = str(e)
             print(f"[api/request all 오류] {e}")
+        _record_send("all", email, requester, kakao, client_ip,
+                     summary, file_count, actual, status, url, err)
     threading.Thread(target=process_all, daemon=True).start()
     return jsonify({"ok": True, "file_count": file_count})
 
