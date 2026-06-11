@@ -19,7 +19,3 @@ jobs:
 
       - name: Cleanup old ZIPs (and keep-alive)
         run: python cleanup_supabase_zips.py
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          SUPABASE_BUCKET: ssangkom-zips

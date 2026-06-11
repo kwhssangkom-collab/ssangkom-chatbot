@@ -36,8 +36,14 @@ COMPANY_NAME = os.getenv("COMPANY_NAME", "쌍곰")
 SERVER_BASE_URL = os.getenv("SERVER_BASE_URL", "http://localhost:5000")
 
 # Supabase Storage (다운로드 ZIP 보관 — 서버 재시작과 무관하게 24h 유지)
-SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").rstrip("/")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+# anon 키는 외부 노출 전제로 설계된 공개키이며, 접근 제어는 Storage RLS 정책으로 처리.
+# 버킷은 public(읽기) + 추측 불가능한 UUID 파일명 + 6시간마다 24h 경과분 자동삭제로 보호.
+SUPABASE_URL = (os.getenv("SUPABASE_URL") or "https://pqpjrrtjpljalgvifgbp.supabase.co").rstrip("/")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_SERVICE_KEY") or (
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGpycnRqcGxqYWxndmlmZ2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEyNjAsImV4cCI6MjA5NjY4NzI2MH0."
+    "BkHS7TchHgeHPUUbR67Y9C3lqt951OBd94Lonj1PE6A"
+)
 SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "ssangkom-zips")
 LINK_TTL_SECONDS = 86400  # 24시간
 
@@ -231,11 +237,11 @@ def _cleanup(path: str, file_id: str):
 
 
 def _upload_to_supabase(file_id: str, data: bytes) -> str | None:
-    """ZIP을 Supabase Storage에 올리고 24h 서명 URL 반환. 미설정/실패 시 None."""
-    if not (SUPABASE_URL and SUPABASE_SERVICE_KEY):
+    """ZIP을 Supabase Storage(public 버킷)에 올리고 직접 다운로드 URL 반환. 실패 시 None."""
+    if not (SUPABASE_URL and SUPABASE_KEY):
         return None
     path = f"{file_id}.zip"
-    auth = {"Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "apikey": SUPABASE_SERVICE_KEY}
+    auth = {"Authorization": f"Bearer {SUPABASE_KEY}", "apikey": SUPABASE_KEY}
     try:
         up = requests.post(
             f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{path}",
@@ -245,18 +251,8 @@ def _upload_to_supabase(file_id: str, data: bytes) -> str | None:
         if up.status_code not in (200, 201):
             print(f"[Supabase 업로드 실패 {up.status_code}] {up.text[:200]}")
             return None
-        sign = requests.post(
-            f"{SUPABASE_URL}/storage/v1/object/sign/{SUPABASE_BUCKET}/{path}",
-            headers={**auth, "Content-Type": "application/json"},
-            json={"expiresIn": LINK_TTL_SECONDS}, timeout=15,
-        )
-        if sign.status_code != 200:
-            print(f"[Supabase 서명 실패 {sign.status_code}] {sign.text[:200]}")
-            return None
-        signed = sign.json().get("signedURL") or sign.json().get("signedUrl")
-        if not signed:
-            return None
-        return f"{SUPABASE_URL}/storage/v1{signed}"
+        # public 버킷이므로 직접 URL 반환 (만료는 24h 후 자동삭제로 처리)
+        return f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{path}"
     except Exception as e:
         print(f"[Supabase 오류] {e}")
         return None

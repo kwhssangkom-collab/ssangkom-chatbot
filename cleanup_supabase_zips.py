@@ -11,13 +11,21 @@ from datetime import datetime, timezone, timedelta
 
 import requests
 
-URL    = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
-KEY    = os.environ.get("SUPABASE_SERVICE_KEY")
+# anon 키는 공개키(외부 노출 전제). 접근 제어는 Storage RLS 정책으로 처리.
+_DEFAULT_URL = "https://pqpjrrtjpljalgvifgbp.supabase.co"
+_DEFAULT_KEY = (
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcGpycnRqcGxqYWxndmlmZ2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTEyNjAsImV4cCI6MjA5NjY4NzI2MH0."
+    "BkHS7TchHgeHPUUbR67Y9C3lqt951OBd94Lonj1PE6A"
+)
+
+URL    = (os.environ.get("SUPABASE_URL") or _DEFAULT_URL).rstrip("/")
+KEY    = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY") or _DEFAULT_KEY
 BUCKET = os.environ.get("SUPABASE_BUCKET", "ssangkom-zips")
 TTL_HOURS = 24
 
 if not (URL and KEY):
-    print("SUPABASE_URL / SUPABASE_SERVICE_KEY 미설정")
+    print("SUPABASE_URL / SUPABASE_KEY 미설정")
     sys.exit(1)
 
 AUTH = {"Authorization": f"Bearer {KEY}", "apikey": KEY, "Content-Type": "application/json"}
