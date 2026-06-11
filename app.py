@@ -1187,7 +1187,7 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 </div>
 
 <div class="notice">
-  <p>&#8226; 기술자료 관련 문의사항은 <strong>기술연구소</strong>로 문의해 주시기 바랍니다.<br>&#8226; 기술자료는 홈페이지에 업로드된 자료를 기반으로 발송됩니다.<br>&#8226; <strong>품목별 전체</strong> / <strong>서류 직접선택</strong> 발송 시 회사 <strong>기본서류 다운로드 버튼</strong>이 기본적으로 이메일에 함께 발송됩니다.</p>
+  <p>&#8226; 기술자료 관련 문의사항은 <strong>기술연구소</strong>로 문의해 주시기 바랍니다.<br>&#8226; 기술자료는 홈페이지에 업로드된 자료를 기반으로 발송됩니다.<br>&#8226; <strong>품목별 전체</strong> / <strong>서류 직접선택</strong> 발송 시 회사 <strong>기본서류 다운로드 버튼</strong>이 기본적으로 이메일에 함께 발송되며, <strong>기술자료 다운로드 링크는 발송 후 24시간 동안만 유효</strong>합니다.</p>
 </div>
 
 <!-- ── Tab 1: 품목별 전체 ── -->
@@ -2001,7 +2001,7 @@ def _age_hours(ts: str):
 
 @app.route("/status/resend", methods=["POST"])
 def status_resend():
-    """영업사원용: 기록된 거래처 이메일로 동일 자료 재발송(원본 수신처로만)."""
+    """영업사원용: 기록된 수신 이메일로 동일 자료 재발송(원본 수신처로만)."""
     email  = (request.form.get("email") or "").strip()
     log_id = request.form.get("id", "")
     back = f"/status?email={urllib.parse.quote(email)}&resent=1" if email else "/status"
@@ -2031,7 +2031,7 @@ def status_resend():
 
 @app.route("/status")
 def status_page():
-    """영업사원용: 거래처 수신 이메일로 발송 요청의 처리 현황 확인 + 재전송."""
+    """영업사원용: 수신 이메일로 발송 요청의 처리 현황 확인 + 재전송."""
     email = (request.args.get("email") or "").strip()
     resent = request.args.get("resent") == "1"
     rows = []
@@ -2077,15 +2077,15 @@ def status_page():
         else:
             info = '<span class="exp">다운로드 링크 없음</span>'
 
-        # 재전송 버튼(완료/실패 건만, 거래처 수신처로만)
+        # 재전송 버튼(완료/실패 건만, 원본 수신처로만)
         resend = ""
         if status in ("success", "partial", "failed") and str(x.get("id", "")).isdigit():
             resend = (
                 f'<form method="post" action="/status/resend" '
-                f'onsubmit="return confirm(\'{_esc(email)}\\n위 거래처로 동일 자료를 다시 발송할까요?\')">'
+                f'onsubmit="return confirm(\'{_esc(email)}\\n위 주소로 동일 자료를 다시 발송할까요?\')">'
                 f'<input type="hidden" name="id" value="{x.get("id")}">'
                 f'<input type="hidden" name="email" value="{_esc(email)}">'
-                f'<button type="submit" class="resend">🔄 거래처에 재전송 요청</button>'
+                f'<button type="submit" class="resend">🔄 재전송 요청</button>'
                 f'</form>'
             )
 
@@ -2100,9 +2100,9 @@ def status_page():
         )
     if searched and not rows:
         cards = ('<div class="empty">해당 이메일로 접수된 <b>발송 요청이 없습니다.</b><br>'
-                 '거래처에 발송 요청하신 수신 이메일 주소가 정확한지 확인해 주세요.</div>')
+                 '수신 이메일 주소가 정확한지 확인해 주세요.</div>')
 
-    intro = "" if searched else ('<div class="empty">거래처에 발송 요청하신 <b>수신 이메일 주소</b>를 입력하면<br>'
+    intro = "" if searched else ('<div class="empty"><b>수신 이메일 주소</b>를 입력하면<br>'
                                  '요청이 정상 처리됐는지(발송 완료 여부)와 재전송을 진행할 수 있습니다.</div>')
     banner = ('<div class="banner">✅ 재전송을 접수했습니다. 잠시 후 목록을 새로고침하면 새 발송 건이 표시됩니다.</div>'
               if resent else "")
@@ -2116,7 +2116,6 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .header{{background:#003389;padding:20px;text-align:center}}
 .header img{{height:34px;filter:brightness(0) invert(1)}}
 .header div{{color:#fff;font-size:17px;font-weight:700;margin-top:8px}}
-.header .sub{{color:#aac4ff;font-size:12px;font-weight:400;margin-top:4px}}
 .search{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .search label{{font-size:13px;font-weight:700;color:#003389;display:block;margin-bottom:8px}}
 .search form{{display:flex;gap:8px}}
@@ -2145,15 +2144,14 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 <div class="header">
   <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM">
   <div>기술자료 발송 처리 현황</div>
-  <div class="sub">영업사원용 · 거래처 발송 요청 처리 확인</div>
 </div>
 <div class="search">
-  <label>거래처(수신) 이메일 주소</label>
+  <label>수신 이메일 주소</label>
   <form method="get" action="/status">
-    <input type="email" name="email" value="{_esc(email)}" placeholder="거래처에 발송 요청한 이메일" autocomplete="off">
+    <input type="email" name="email" value="{_esc(email)}" placeholder="발송 요청한 이메일" autocomplete="off">
     <button type="submit">조회</button>
   </form>
-  <div class="hint">기술자료를 발송 요청하신 거래처의 수신 이메일을 입력하세요.</div>
+  <div class="hint">기술자료를 발송 요청하신 수신 이메일 주소를 입력하세요.</div>
 </div>
 {banner}
 <div class="list">{intro}{cards}</div>
