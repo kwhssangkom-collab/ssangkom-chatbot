@@ -1089,6 +1089,8 @@ def request_page():
             f'<select class="email-select" id="emailSel{n}" onchange="pickDomain({n})">'
             f'<option value="">도메인 빠른선택</option>{domain_opts}</select>'
             f'<div class="email-status" id="emailStatus{n}"></div>'
+            f'<div id="extraEmails{n}"></div>'
+            f'<button type="button" class="add-email-btn" id="addEmailBtn{n}" onclick="addEmail({n})">+ 수신 이메일 추가 (최대 3)</button>'
         )
 
     email1, email2, email3 = email_block(1), email_block(2), email_block(3)
@@ -1147,6 +1149,12 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .email-status.ok{{color:#1a7f37}}
 .email-status.err{{color:#dc2f3a}}
 .email-status.checking{{color:#888}}
+.add-email-btn{{display:block;width:100%;margin-top:10px;padding:10px;background:#eef2fb;color:#003389;border:1.5px dashed #b9c8ea;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}}
+.add-email-btn:active{{background:#e2e9f9}}
+.extra-row{{display:flex;align-items:center;gap:8px;margin-top:8px}}
+.extra-row .email-input{{flex:1;min-width:0}}
+.rm-email{{flex-shrink:0;width:38px;height:42px;background:#fff;border:1.5px solid #dde3ef;border-radius:8px;color:#999;font-size:18px;cursor:pointer;font-family:inherit;line-height:1}}
+.rm-email:hover{{border-color:#dc2f3a;color:#dc2f3a}}
 .submit-btn{{width:100%;padding:15px;background:#003389;color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit;transition:.2s}}
 .submit-btn:active{{background:#002270}}
 .submit-btn:disabled{{background:#aaa;cursor:not-allowed}}
@@ -1337,6 +1345,52 @@ function getEmail(n) {{
   return document.getElementById('email' + n).value.trim();
 }}
 
+function getEmails(n) {{
+  var list = [];
+  var primary = document.getElementById('email' + n).value.trim();
+  if (primary) list.push(primary);
+  var extras = document.querySelectorAll('.extra' + n);
+  for (var i = 0; i < extras.length; i++) {{
+    var v = extras[i].value.trim();
+    if (v) list.push(v);
+  }}
+  return list.filter(function(v, i) {{ return list.indexOf(v) === i; }});  // 중복 제거
+}}
+
+function updateAddBtn(n) {{
+  var cont = document.getElementById('extraEmails' + n);
+  var total = 1 + cont.querySelectorAll('.extra' + n).length;
+  document.getElementById('addEmailBtn' + n).style.display = (total >= 3) ? 'none' : 'block';
+}}
+
+function addEmail(n) {{
+  var cont = document.getElementById('extraEmails' + n);
+  if (1 + cont.querySelectorAll('.extra' + n).length >= 3) return;
+  var row = document.createElement('div');
+  row.className = 'extra-row';
+  var inp = document.createElement('input');
+  inp.type = 'email'; inp.className = 'email-input extra' + n;
+  inp.placeholder = '추가 수신 이메일'; inp.autocomplete = 'off';
+  var rm = document.createElement('button');
+  rm.type = 'button'; rm.className = 'rm-email'; rm.innerHTML = '&times;';
+  rm.addEventListener('click', function() {{ cont.removeChild(row); updateAddBtn(n); }});
+  row.appendChild(inp); row.appendChild(rm);
+  cont.appendChild(row);
+  updateAddBtn(n);
+  inp.focus();
+}}
+
+function validEmails(n) {{
+  var emails = getEmails(n);
+  if (!emails.length) {{ alert('수신 이메일 주소를 입력해주세요.'); return null; }}
+  if (emails.length > 3) {{ alert('수신 이메일은 최대 3개까지 가능합니다.'); return null; }}
+  var re = /^[\\w.+-]+@[\\w.-]+\\.[\\w]{{2,}}$/;
+  for (var i = 0; i < emails.length; i++) {{
+    if (!re.test(emails[i])) {{ alert('올바르지 않은 이메일 주소: ' + emails[i]); return null; }}
+  }}
+  return emails;
+}}
+
 function pickDomain(n) {{
   var sel = document.getElementById('emailSel' + n);
   if (!sel.value) return;
@@ -1440,14 +1494,13 @@ function updateSelectedBar1() {{
 }}
 
 function submitAll() {{
-  var email = getEmail(1);
   if (!selected1.length) {{ alert('품목을 1개 이상 선택해주세요.'); return; }}
-  if (!email || !/^[\\w.+-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
+  var emails = validEmails(1); if (!emails) return;
   document.getElementById('submitBtn1').disabled = true;
   document.getElementById('loading1').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'all', products: selected1, email: email, kakao_user_id: KAKAO_UID}})
+    body: JSON.stringify({{mode: 'all', products: selected1, emails: emails, kakao_user_id: KAKAO_UID}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1455,7 +1508,7 @@ function submitAll() {{
       document.getElementById('main1').style.display = 'none';
       document.getElementById('success1').style.display = 'block';
       document.getElementById('successMsg1').innerHTML =
-        '<b>' + selected1.join(', ') + '</b><br>총 ' + d.file_count + '개 파일<br><br>📧 ' + email + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
+        '<b>' + selected1.join(', ') + '</b><br>총 ' + d.file_count + '개 파일<br><br>📧 ' + emails.join('<br>') + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
     }} else {{
       alert('오류: ' + (d.error || ''));
       document.getElementById('submitBtn1').disabled = false;
@@ -1614,9 +1667,8 @@ function updateSelectedBar2() {{
 }}
 
 function submitSpecific() {{
-  var email = getEmail(2);
   if (!selectedItems2.length) {{ alert('서류를 1개 이상 선택해주세요.'); return; }}
-  if (!email || !/^[\\w.+-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
+  var emails = validEmails(2); if (!emails) return;
   var grouped = {{}};
   selectedItems2.forEach(function(item) {{
     if (!grouped[item.product]) grouped[item.product] = [];
@@ -1629,7 +1681,7 @@ function submitSpecific() {{
   document.getElementById('loading2').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'specific', selections: selections, email: email, kakao_user_id: KAKAO_UID}})
+    body: JSON.stringify({{mode: 'specific', selections: selections, emails: emails, kakao_user_id: KAKAO_UID}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1637,7 +1689,7 @@ function submitSpecific() {{
       document.getElementById('main2').style.display = 'none';
       document.getElementById('success2').style.display = 'block';
       document.getElementById('successMsg2').innerHTML =
-        '선택 서류 ' + d.file_count + '개<br><br>📧 ' + email + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
+        '선택 서류 ' + d.file_count + '개<br><br>📧 ' + emails.join('<br>') + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
     }} else {{
       alert('오류: ' + (d.error || ''));
       document.getElementById('submitBtn2').disabled = false;
@@ -1729,14 +1781,13 @@ function updateSelectedBar3() {{
 }}
 
 function submitBasic() {{
-  var email = getEmail(3);
   if (!selectedBasic3.length) {{ alert('서류를 1개 이상 선택해주세요.'); return; }}
-  if (!email || !/^[\\w.+-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
+  var emails = validEmails(3); if (!emails) return;
   document.getElementById('submitBtn3').disabled = true;
   document.getElementById('loading3').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'basic', doc_indices: selectedBasic3, email: email, kakao_user_id: KAKAO_UID}})
+    body: JSON.stringify({{mode: 'basic', doc_indices: selectedBasic3, emails: emails, kakao_user_id: KAKAO_UID}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1744,7 +1795,7 @@ function submitBasic() {{
       document.getElementById('main3').style.display = 'none';
       document.getElementById('success3').style.display = 'block';
       document.getElementById('successMsg3').innerHTML =
-        '기본서류 ' + d.file_count + '개<br><br>📧 ' + email + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
+        '기본서류 ' + d.file_count + '개<br><br>📧 ' + emails.join('<br>') + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
     }} else {{
       alert('오류: ' + (d.error || ''));
       document.getElementById('submitBtn3').disabled = false;
@@ -1796,9 +1847,11 @@ def _finish_send(log_id, mode, email, requester, kakao, ip, summary, requested, 
         )
 
 
-def _dispatch_send(mode, email, requester, kakao, ip, *, products=None, selections=None, doc_indices=None):
-    """검증된 입력으로 발송 작업 시작(처리중 로그 + 백그라운드 ZIP/발송). file_count 반환.
-    재전송 시에도 동일 경로 사용(payload로 재구성)."""
+def _dispatch_send(mode, emails, requester, kakao, ip, *, products=None, selections=None, doc_indices=None):
+    """검증된 입력으로 발송 작업 시작. ZIP은 1회 생성 후 수신자 각각에게 발송+개별 기록.
+    emails: 수신 이메일 리스트(1~3). 재전송도 동일 경로 사용. file_count 반환."""
+    emails = [e for e in (emails or []) if e]
+
     if mode == "basic":
         doc_indices = doc_indices or []
         if doc_indices:
@@ -1808,21 +1861,9 @@ def _dispatch_send(mode, email, requester, kakao, ip, *, products=None, selectio
         file_count = len(doc_labels)
         summary = ", ".join(doc_labels)
         payload = {"mode": "basic", "doc_indices": doc_indices}
-        log_id = _log_pending("basic", email, requester, kakao, ip, summary, file_count, payload)
-        def worker():
-            url = ""; actual = 0; status = "success"; err = ""
-            try:
-                url, actual = create_basic_zip(doc_indices if doc_indices else None)
-                send_email_basic(email, url, doc_labels)
-                if actual < file_count:
-                    status = "partial"
-            except Exception as e:
-                status = "failed"; err = str(e); print(f"[basic 오류] {e}")
-            _finish_send(log_id, "basic", email, requester, kakao, ip, summary, file_count, actual, status, url, err)
-        threading.Thread(target=worker, daemon=True).start()
-        return file_count
-
-    if mode == "specific":
+        build    = lambda: create_basic_zip(doc_indices if doc_indices else None)
+        send_one = lambda to, url: send_email_basic(to, url, doc_labels)
+    elif mode == "specific":
         selections = selections or []
         summary_list = []
         file_count = 0
@@ -1831,38 +1872,39 @@ def _dispatch_send(mode, email, requester, kakao, ip, *, products=None, selectio
             labels = [docs[i].get("type", "파일") for i in sel["doc_indices"] if 0 <= i < len(docs)]
             summary_list.append({"product": sel["product"], "labels": labels})
             file_count += len(sel["doc_indices"])
-        summary_text = "; ".join(f"{s['product']}: " + ", ".join(s["labels"]) for s in summary_list)
+        summary = "; ".join(f"{s['product']}: " + ", ".join(s["labels"]) for s in summary_list)
         payload = {"mode": "specific", "selections": selections}
-        log_id = _log_pending("specific", email, requester, kakao, ip, summary_text, file_count, payload)
-        def worker():
-            url = ""; actual = 0; status = "success"; err = ""
-            try:
-                url, actual = create_specific_zip(selections)
-                send_email_specific(email, summary_list, url)
-                if actual < file_count:
-                    status = "partial"
-            except Exception as e:
-                status = "failed"; err = str(e); print(f"[specific 오류] {e}")
-            _finish_send(log_id, "specific", email, requester, kakao, ip, summary_text, file_count, actual, status, url, err)
-        threading.Thread(target=worker, daemon=True).start()
-        return file_count
+        build    = lambda: create_specific_zip(selections)
+        send_one = lambda to, url: send_email_specific(to, summary_list, url)
+    else:  # all
+        products = products or []
+        file_count = sum(len(DOCUMENT_MAP.get(p, [])) for p in products)
+        summary = ", ".join(products)
+        payload = {"mode": "all", "products": products}
+        build    = lambda: create_zip(products)
+        send_one = lambda to, url: send_email(to, products, url)
 
-    # all
-    products = products or []
-    file_count = sum(len(DOCUMENT_MAP.get(p, [])) for p in products)
-    summary = ", ".join(products)
-    payload = {"mode": "all", "products": products}
-    log_id = _log_pending("all", email, requester, kakao, ip, summary, file_count, payload)
+    log_ids = [_log_pending(mode, e, requester, kakao, ip, summary, file_count, payload) for e in emails]
+
     def worker():
-        url = ""; actual = 0; status = "success"; err = ""
+        url = ""; actual = 0; build_err = ""
         try:
-            url, actual = create_zip(products)
-            send_email(email, products, url)
-            if actual < file_count:
-                status = "partial"
+            url, actual = build()
         except Exception as e:
-            status = "failed"; err = str(e); print(f"[all 오류] {e}")
-        _finish_send(log_id, "all", email, requester, kakao, ip, summary, file_count, actual, status, url, err)
+            build_err = str(e); print(f"[{mode} ZIP 오류] {e}")
+        for e, lid in zip(emails, log_ids):
+            status = "success"; err = build_err
+            if build_err:
+                status = "failed"
+            else:
+                try:
+                    send_one(e, url)
+                    if actual < file_count:
+                        status = "partial"
+                except Exception as ex:
+                    status = "failed"; err = str(ex); print(f"[{mode} 발송 오류 {e}] {ex}")
+            _finish_send(lid, mode, e, requester, kakao, ip, summary, file_count, actual, status, url, err)
+
     threading.Thread(target=worker, daemon=True).start()
     return file_count
 
@@ -1874,23 +1916,37 @@ def api_request():
 
     data  = request.json or {}
     mode  = data.get("mode", "all")
-    email = data.get("email", "").strip()
     requester = (data.get("requester") or "").strip()[:100]
     kakao     = (data.get("kakao_user_id") or "").strip()[:100]
     client_ip = _client_ip()
 
-    if not email or not re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", email):
-        return jsonify({"ok": False, "error": "올바른 이메일 주소를 입력해주세요"}), 400
-
-    ok_domain, reason = verify_email_domain(email)
-    if not ok_domain:
-        return jsonify({"ok": False, "error": reason or "존재하지 않는 이메일 도메인입니다. 주소를 다시 확인해주세요."}), 400
+    # 수신 이메일: emails(배열) 우선, 없으면 email(단일). 최대 3개.
+    raw_emails = data.get("emails")
+    if not raw_emails:
+        single = (data.get("email") or "").strip()
+        raw_emails = [single] if single else []
+    emails = []
+    for e in raw_emails:
+        e = (e or "").strip()
+        if not e:
+            continue
+        if not re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", e):
+            return jsonify({"ok": False, "error": f"올바른 이메일 주소가 아닙니다: {e}"}), 400
+        ok_domain, reason = verify_email_domain(e)
+        if not ok_domain:
+            return jsonify({"ok": False, "error": f"{e} — {reason or '존재하지 않는 도메인입니다'}"}), 400
+        if e not in emails:
+            emails.append(e)
+    if not emails:
+        return jsonify({"ok": False, "error": "수신 이메일 주소를 입력해주세요"}), 400
+    if len(emails) > 3:
+        return jsonify({"ok": False, "error": "수신 이메일은 최대 3개까지 입력할 수 있습니다"}), 400
 
     if mode == "basic":
         doc_indices = [i for i in data.get("doc_indices", [])
                        if isinstance(i, int) and 0 <= i < len(COMPANY_DOCS_LIST)]
-        file_count = _dispatch_send("basic", email, requester, kakao, client_ip, doc_indices=doc_indices)
-        return jsonify({"ok": True, "file_count": file_count})
+        file_count = _dispatch_send("basic", emails, requester, kakao, client_ip, doc_indices=doc_indices)
+        return jsonify({"ok": True, "file_count": file_count, "recipients": len(emails)})
 
     if mode == "specific":
         raw_selections = data.get("selections", [])
@@ -1907,8 +1963,8 @@ def api_request():
                 selections.append({"product": product, "doc_indices": idxs})
         if not selections:
             return jsonify({"ok": False, "error": "유효한 서류가 없습니다"}), 400
-        file_count = _dispatch_send("specific", email, requester, kakao, client_ip, selections=selections)
-        return jsonify({"ok": True, "file_count": file_count})
+        file_count = _dispatch_send("specific", emails, requester, kakao, client_ip, selections=selections)
+        return jsonify({"ok": True, "file_count": file_count, "recipients": len(emails)})
 
     # mode == "all"
     products = data.get("products", [])
@@ -1917,8 +1973,8 @@ def api_request():
     valid = [p for p in products if p in DOCUMENT_MAP]
     if not valid:
         return jsonify({"ok": False, "error": "유효한 품목이 없습니다"}), 400
-    file_count = _dispatch_send("all", email, requester, kakao, client_ip, products=valid)
-    return jsonify({"ok": True, "file_count": file_count})
+    file_count = _dispatch_send("all", emails, requester, kakao, client_ip, products=valid)
+    return jsonify({"ok": True, "file_count": file_count, "recipients": len(emails)})
 
 
 def _doc_display_name(doc: dict) -> str:
@@ -2001,12 +2057,20 @@ def _age_hours(ts: str):
 
 @app.route("/status/resend", methods=["POST"])
 def status_resend():
-    """영업사원용: 기록된 수신 이메일로 동일 자료 재발송(원본 수신처로만)."""
-    email  = (request.form.get("email") or "").strip()
+    """영업사원용: 동일 자료를 재발송. 원본 수신처(email) 또는 입력한 다른 주소(to)로 전송."""
+    email  = (request.form.get("email") or "").strip()   # 조회/인증용(기록된 수신처)
+    to     = (request.form.get("to") or "").strip()       # 선택: 다른 주소로 전송
     log_id = request.form.get("id", "")
-    back = f"/status?email={urllib.parse.quote(email)}&resent=1" if email else "/status"
+    base   = f"/status?email={urllib.parse.quote(email)}" if email else "/status"
     if _rate_limited() or not (email and log_id.isdigit() and SUPABASE_URL and SUPABASE_KEY):
-        return redirect(back)
+        return redirect(base)
+    # 다른 주소로 보낼 경우 형식/도메인 검증
+    if to:
+        if not re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", to):
+            return redirect(base + "&err=1")
+        okd, _r = verify_email_domain(to)
+        if not okd:
+            return redirect(base + "&err=1")
     try:
         r = requests.get(
             f"{SUPABASE_URL}/rest/v1/send_logs?select=email,payload&id=eq.{log_id}",
@@ -2017,16 +2081,17 @@ def status_resend():
     except Exception as e:
         print(f"[resend 조회 실패] {e}")
         rows = []
-    if not rows or (rows[0].get("email") or "") != email:   # 이메일 일치할 때만 허용
-        return redirect(back)
+    if not rows or (rows[0].get("email") or "") != email:   # 기록된 수신처와 일치할 때만 허용
+        return redirect(base)
     payload = rows[0].get("payload") or {}
     mode = payload.get("mode")
+    target = to or email
     if mode in ("all", "specific", "basic"):
-        _dispatch_send(mode, email, "재전송", "", _client_ip(),
+        _dispatch_send(mode, [target], "재전송", "", _client_ip(),
                        products=payload.get("products"),
                        selections=payload.get("selections"),
                        doc_indices=payload.get("doc_indices"))
-    return redirect(back)
+    return redirect(f"/status?email={urllib.parse.quote(target)}&resent=1")
 
 
 @app.route("/status")
@@ -2077,15 +2142,16 @@ def status_page():
         else:
             info = '<span class="exp">다운로드 링크 없음</span>'
 
-        # 재전송 버튼(완료/실패 건만, 원본 수신처로만)
+        # 재전송(완료/실패 건만). 비워두면 원본 수신처, 입력하면 다른 주소로 전송.
         resend = ""
         if status in ("success", "partial", "failed") and str(x.get("id", "")).isdigit():
             resend = (
                 f'<form method="post" action="/status/resend" '
-                f'onsubmit="return confirm(\'{_esc(email)}\\n위 주소로 동일 자료를 다시 발송할까요?\')">'
+                f'onsubmit="return confirm(this.to.value ? (this.to.value+\'\\n위 주소로 발송할까요?\') : (\'{_esc(email)}\\n위 주소로 동일 자료를 다시 발송할까요?\'))">'
                 f'<input type="hidden" name="id" value="{x.get("id")}">'
                 f'<input type="hidden" name="email" value="{_esc(email)}">'
-                f'<button type="submit" class="resend">🔄 재전송 요청</button>'
+                f'<input type="email" name="to" class="toinput" placeholder="다른 주소로 보낼 경우 입력 (비우면 원래 주소)" autocomplete="off">'
+                f'<button type="submit" class="resend">🔄 재전송</button>'
                 f'</form>'
             )
 
@@ -2104,8 +2170,11 @@ def status_page():
 
     intro = "" if searched else ('<div class="empty"><b>수신 이메일 주소</b>를 입력하면<br>'
                                  '요청이 정상 처리됐는지(발송 완료 여부)와 재전송을 진행할 수 있습니다.</div>')
-    banner = ('<div class="banner">✅ 재전송을 접수했습니다. 잠시 후 목록을 새로고침하면 새 발송 건이 표시됩니다.</div>'
-              if resent else "")
+    banner = ""
+    if resent:
+        banner = '<div class="banner">✅ 재전송을 접수했습니다. 잠시 후 목록을 새로고침하면 새 발송 건이 표시됩니다.</div>'
+    elif request.args.get("err") == "1":
+        banner = '<div class="banner err">⚠️ 입력한 이메일 주소가 올바르지 않아 재전송하지 못했습니다. 주소를 확인해 주세요.</div>'
 
     html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
@@ -2136,8 +2205,11 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .exp{{color:#c0392b;font-weight:600}}
 .muted{{color:#aaa}}
 .act{{border-top:1px solid #f0f3f8;padding-top:11px}}
+.toinput{{width:100%;padding:10px 12px;border:1.5px solid #dde3ef;border-radius:8px;font-size:13.5px;outline:none;font-family:inherit;margin-bottom:8px}}
+.toinput:focus{{border-color:#003389}}
 .resend{{width:100%;padding:12px;background:#003389;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}}
 .resend:active{{background:#002270}}
+.banner.err{{background:#fdecea;color:#c0392b}}
 .empty{{background:#fff;margin:12px;border-radius:12px;padding:28px 20px;text-align:center;color:#777;font-size:14px;line-height:1.8;box-shadow:0 1px 6px rgba(0,0,0,.06)}}
 .note{{font-size:12px;color:#999;text-align:center;padding:4px 20px 22px;line-height:1.7}}
 </style></head><body>
@@ -2155,7 +2227,7 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 </div>
 {banner}
 <div class="list">{intro}{cards}</div>
-<div class="note">※ 다운로드 링크는 발송 후 24시간 동안 유효합니다. 만료 시 ‘재전송’으로 다시 보낼 수 있습니다.<br>※ 문의: 기술상담실(080-768-3030)</div>
+<div class="note">※ 다운로드 링크는 발송 후 24시간 동안 유효합니다. 만료 시 ‘재전송’으로 다시 보낼 수 있습니다.</div>
 </body></html>"""
     return Response(html, mimetype="text/html; charset=utf-8")
 
