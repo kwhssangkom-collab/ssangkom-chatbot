@@ -850,7 +850,7 @@ def admin_send_test():
 def request_page():
     products_json    = json.dumps(PRODUCT_NAMES, ensure_ascii=False)
     basic_docs_json  = json.dumps([d["label"] for d in COMPANY_DOCS_LIST], ensure_ascii=False)
-    domain_opts = "".join(f'<option value="{d}">{d}</option>' for d in COMMON_EMAIL_DOMAINS)
+    domain_opts = "".join(f'<option value="{d}">@{d}</option>' for d in COMMON_EMAIL_DOMAINS)
 
     def email_block(n: int) -> str:
         return (
