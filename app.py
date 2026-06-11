@@ -2133,7 +2133,7 @@ def status_page():
 
         # 링크 유효성 안내(영업사원 관점)
         if status == "처리중":
-            info = '<span class="muted">발송 처리 중입니다…</span>'
+            info = '<span class="muted">발송 처리 중입니다… (자동으로 새로고침됩니다)</span>'
         elif link_ok:
             rem = max(0, int(24 - age)) if age is not None else 24
             info = (f'<a class="open" href="{_esc(link)}" target="_blank">내용 직접 확인</a>'
@@ -2156,8 +2156,9 @@ def status_page():
                 f'</form>'
             )
 
+        pend = ' data-pending="1"' if status == "처리중" else ""
         cards += (
-            '<div class="card">'
+            f'<div class="card"{pend}>'
             f'<div class="row1"><span class="ts">{ts}</span>{sbadge(status)}</div>'
             f'<div class="sum">{_esc(x.get("summary"))}</div>'
             f'<div class="files">발송 파일 {cnt}건</div>'
@@ -2243,6 +2244,15 @@ function pickSDomain() {{
   sel.selectedIndex = 0;
   inp.focus();
 }}
+// '처리 중' 건이 있으면 완료될 때까지 자동 새로고침(최대 약 2.5분)
+(function() {{
+  if (document.querySelector('[data-pending]')) {{
+    var k = 'skmStatusReload', n = parseInt(sessionStorage.getItem(k) || '0', 10);
+    if (n < 10) {{ sessionStorage.setItem(k, n + 1); setTimeout(function() {{ location.reload(); }}, 15000); }}
+  }} else {{
+    sessionStorage.removeItem('skmStatusReload');
+  }}
+}})();
 </script>
 </body></html>"""
     return Response(html, mimetype="text/html; charset=utf-8")
