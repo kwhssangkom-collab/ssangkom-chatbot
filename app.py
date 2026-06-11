@@ -1017,6 +1017,10 @@ def admin_logs():
     n_ok   = sum(1 for x in rows if x.get("status") == "success")
     n_part = sum(1 for x in rows if x.get("status") == "partial")
     n_fail = sum(1 for x in rows if x.get("status") == "failed")
+    broken_n = sum(1 for docs in DOCUMENT_MAP.values() for d in docs if not d.get("github_url"))
+    dochealth = (f'<div class="warn"><span>⚠️ 발송 시 누락되는 서류 <b>{broken_n}건</b>이 있습니다 '
+                 f'(원본 접근 불가).</span><a href="/admin/docs-health?token={_esc(token)}">자세히 보기 →</a></div>'
+                 if broken_n else "")
 
     def badge(s):
         c = {"success": "#1a7f37", "partial": "#b7791f", "failed": "#dc2f3a", "처리중": "#888"}.get(s, "#888")
@@ -1055,9 +1059,10 @@ def admin_logs():
     html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>쌍곰봇 기술자료 발송 기록</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
-*{{box-sizing:border-box}} body{{margin:0;font-family:'Malgun Gothic',sans-serif;background:#f0f3f8;color:#222}}
-.top{{background:#003389;color:#fff;padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}}
+*{{box-sizing:border-box}} body{{margin:0;font-family:'Pretendard','Malgun Gothic',sans-serif;background:#f0f3f8;color:#222}}
+.top{{background:linear-gradient(135deg,#003389,#0a4bb5);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}}
 .top h1{{font-size:18px;margin:0}}
 .stat{{font-size:13px;background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px}}
 .wrap{{padding:14px;overflow-x:auto}}
@@ -1075,6 +1080,8 @@ a{{color:#003389}}
 .srch{{margin-left:auto;display:flex;gap:6px}}
 .srch input{{padding:6px 10px;border:none;border-radius:8px;font-size:13px;font-family:inherit;outline:none;width:170px}}
 .srch button{{padding:6px 12px;border:none;border-radius:8px;background:#fff;color:#003389;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}}
+.warn{{background:#fff8e6;border-left:4px solid #f0a500;margin:14px 14px 0;padding:11px 16px;border-radius:8px;font-size:13px;color:#7a5800;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}}
+.warn a{{color:#003389;font-weight:700;white-space:nowrap}}
 </style></head><body>
 <div class="top">
   <h1>📋 기술자료 발송 기록</h1>
@@ -1089,6 +1096,7 @@ a{{color:#003389}}
     <a class="refresh" href="/admin/logs?token={_esc(token)}">전체</a>
   </form>
 </div>
+{dochealth}
 <div class="wrap">
 <table>
 <thead><tr>
@@ -1097,6 +1105,68 @@ a{{color:#003389}}
 <tbody>{trs}</tbody>
 </table>
 </div>
+</body></html>"""
+    return Response(html, mimetype="text/html; charset=utf-8")
+
+
+@app.route("/admin/docs-health")
+def admin_docs_health():
+    """발송 시 누락되는 서류(원본 접근 불가/미캐싱) 점검."""
+    token = request.args.get("token", "")
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return "unauthorized", 403
+
+    total = 0
+    broken = {}   # product -> [types]
+    for product, docs in DOCUMENT_MAP.items():
+        for d in docs:
+            total += 1
+            if not d.get("github_url"):
+                broken.setdefault(product, []).append(d.get("type", "파일"))
+    broken_n = sum(len(v) for v in broken.values())
+    cached_n = total - broken_n
+
+    if broken:
+        items = "".join(
+            f'<div class="bitem"><div class="bp">{_esc(p)}</div>'
+            f'<div class="bt">{_esc(", ".join(types))}</div></div>'
+            for p, types in broken.items()
+        )
+        body = (f'<div class="msg err">⚠️ 아래 서류는 <b>원본 사이트에서 접근이 불가</b>하여 '
+                f'발송 시 자동으로 누락됩니다. 홈페이지 측에서 해당 파일 링크를 점검·복구해 주세요.</div>'
+                f'<div class="blist">{items}</div>')
+    else:
+        body = '<div class="msg ok">✅ 모든 서류가 정상 캐시되어 있습니다. 누락 위험이 없습니다.</div>'
+
+    html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>서류 상태 점검</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:'Pretendard','Malgun Gothic',sans-serif;background:#f0f3f8;color:#222}}
+.top{{background:linear-gradient(135deg,#003389,#0a4bb5);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}}
+.top h1{{font-size:18px;margin:0}}
+.stat{{font-size:13px;background:rgba(255,255,255,.16);border-radius:8px;padding:4px 10px}}
+.back{{margin-left:auto;color:#fff;font-size:13px;text-decoration:none;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:8px}}
+.wrap{{padding:14px;max-width:760px;margin:0 auto}}
+.msg{{border-radius:10px;padding:14px 16px;font-size:13.5px;line-height:1.7;margin-bottom:14px}}
+.msg.err{{background:#fff8e6;border-left:4px solid #f0a500;color:#7a5800}}
+.msg.ok{{background:#e6f4ea;border-left:4px solid #1a7f37;color:#1a7f37;font-weight:600}}
+.blist{{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden}}
+.bitem{{padding:13px 16px;border-bottom:1px solid #eef1f6}}
+.bitem:last-child{{border-bottom:none}}
+.bp{{font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:4px}}
+.bt{{font-size:12.5px;color:#c0392b;font-weight:600}}
+</style></head><body>
+<div class="top">
+  <h1>🩺 서류 상태 점검</h1>
+  <span class="stat">전체 {total}</span>
+  <span class="stat">정상 {cached_n}</span>
+  <span class="stat">누락 {broken_n}</span>
+  <a class="back" href="/admin/logs?token={_esc(token)}">← 발송 기록</a>
+</div>
+<div class="wrap">{body}</div>
 </body></html>"""
     return Response(html, mimetype="text/html; charset=utf-8")
 
@@ -1129,10 +1199,11 @@ def request_page():
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>쌍곰 기술자료 요청</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{background:#003389;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
+body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
+.header{{background:linear-gradient(135deg,#003389,#0a4bb5);padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
 .header img{{height:36px;filter:brightness(0) invert(1)}}
 .header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .tabs{{display:flex;background:#fff;border-bottom:2px solid #e0e6f0;position:sticky;top:0;z-index:10}}
@@ -1186,7 +1257,7 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 .extra-row .email-input{{flex:1;min-width:0}}
 .rm-email{{flex-shrink:0;width:38px;height:42px;background:#fff;border:1.5px solid #dde3ef;border-radius:8px;color:#999;font-size:18px;cursor:pointer;font-family:inherit;line-height:1}}
 .rm-email:hover{{border-color:#dc2f3a;color:#dc2f3a}}
-.submit-btn{{width:100%;padding:15px;background:#003389;color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit;transition:.2s}}
+.submit-btn{{width:100%;padding:15px;background:#003389;color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit;transition:.2s;box-shadow:0 4px 14px rgba(0,51,137,.22)}}
 .submit-btn:active{{background:#002270}}
 .submit-btn:disabled{{background:#aaa;cursor:not-allowed}}
 .hint{{font-size:12px;color:#999;margin-top:6px;text-align:center}}
@@ -2214,10 +2285,11 @@ def status_page():
     html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>기술자료 발송 처리 현황</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{background:#003389;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
+body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
+.header{{background:linear-gradient(135deg,#003389,#0a4bb5);padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
 .header img{{height:36px;filter:brightness(0) invert(1)}}
 .header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
@@ -2324,10 +2396,11 @@ def guide_page():
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>쌍곰 서비스 이용안내</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{background:#003389;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
+body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
+.header{{background:linear-gradient(135deg,#003389,#0a4bb5);padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
 .header img{{height:44px;filter:brightness(0) invert(1)}}
 .header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
