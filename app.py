@@ -65,10 +65,9 @@ def _client_ip() -> str:
     return request.remote_addr or "unknown"
 
 
-def _rate_limited() -> bool:
-    """IP당 분/시간 한도 초과 시 True. 인메모리 슬라이딩 윈도우."""
+def _rate_limited_memory(ip: str) -> bool:
+    """프로세스별 인메모리 슬라이딩 윈도우 (DB 폴백용)."""
     now = datetime.now().timestamp()
-    ip  = _client_ip()
     with _rate_lock:
         hits = [t for t in _rate_hits.get(ip, []) if now - t < 3600]
         per_min = sum(1 for t in hits if now - t < 60)
@@ -77,11 +76,38 @@ def _rate_limited() -> bool:
             return True
         hits.append(now)
         _rate_hits[ip] = hits
-        # 메모리 누수 방지: 가끔 빈 항목 정리
-        if len(_rate_hits) > 5000:
+        if len(_rate_hits) > 5000:  # 메모리 누수 방지
             for k in [k for k, v in _rate_hits.items() if not v or now - v[-1] > 3600]:
                 _rate_hits.pop(k, None)
         return False
+
+
+def _rate_limited_db(ip: str):
+    """Supabase 공유 카운터(워커/재시작 무관). 사용불가/오류 시 None."""
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return None
+    try:
+        r = requests.post(
+            f"{SUPABASE_URL}/rest/v1/rpc/check_rate_limit",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+                     "Content-Type": "application/json"},
+            json={"p_ip": ip, "p_per_min": RATE_PER_MIN, "p_per_hour": RATE_PER_HOUR},
+            timeout=4,
+        )
+        if r.status_code == 200:
+            return r.json() is False   # allowed=False → 차단
+        return None
+    except Exception:
+        return None
+
+
+def _rate_limited() -> bool:
+    """IP당 분/시간 한도 초과 시 True. 공유 카운터 우선, 장애 시 인메모리 폴백(fail-open)."""
+    ip = _client_ip()
+    db = _rate_limited_db(ip)
+    if db is not None:
+        return db
+    return _rate_limited_memory(ip)
 
 TEMP_DIR = os.path.join(os.getenv("TMPDIR", "/tmp"), "ssangkom_zips")
 os.makedirs(TEMP_DIR, exist_ok=True)
