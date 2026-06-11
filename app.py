@@ -20,7 +20,7 @@ from email.mime.text import MIMEText
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_file, Response
+from flask import Flask, jsonify, request, send_file, Response, redirect
 
 load_dotenv()
 
@@ -713,7 +713,7 @@ def _log_send(**fields):
         print(f"[send_logs 기록 실패] {e}")
 
 
-def _log_pending(mode, email, requester, kakao, ip, summary, requested):
+def _log_pending(mode, email, requester, kakao, ip, summary, requested, payload=None):
     """요청 접수 시점에 '처리중' 기록을 남기고 row id 반환 (완료 시 갱신용)."""
     if not (SUPABASE_URL and SUPABASE_KEY):
         return None
@@ -724,7 +724,7 @@ def _log_pending(mode, email, requester, kakao, ip, summary, requested):
                      "Content-Type": "application/json", "Prefer": "return=representation"},
             json={"email": email, "requester": requester, "kakao_user_id": kakao, "mode": mode,
                   "summary": summary, "files_requested": requested, "files_actual": 0,
-                  "status": "처리중", "client_ip": ip},
+                  "status": "처리중", "client_ip": ip, "payload": payload},
             timeout=8,
         )
         if r.status_code in (200, 201):
@@ -1796,6 +1796,77 @@ def _finish_send(log_id, mode, email, requester, kakao, ip, summary, requested, 
         )
 
 
+def _dispatch_send(mode, email, requester, kakao, ip, *, products=None, selections=None, doc_indices=None):
+    """검증된 입력으로 발송 작업 시작(처리중 로그 + 백그라운드 ZIP/발송). file_count 반환.
+    재전송 시에도 동일 경로 사용(payload로 재구성)."""
+    if mode == "basic":
+        doc_indices = doc_indices or []
+        if doc_indices:
+            doc_labels = [COMPANY_DOCS_LIST[i]["label"] for i in doc_indices if 0 <= i < len(COMPANY_DOCS_LIST)]
+        else:
+            doc_labels = [d["label"] for d in COMPANY_DOCS_LIST]
+        file_count = len(doc_labels)
+        summary = ", ".join(doc_labels)
+        payload = {"mode": "basic", "doc_indices": doc_indices}
+        log_id = _log_pending("basic", email, requester, kakao, ip, summary, file_count, payload)
+        def worker():
+            url = ""; actual = 0; status = "success"; err = ""
+            try:
+                url, actual = create_basic_zip(doc_indices if doc_indices else None)
+                send_email_basic(email, url, doc_labels)
+                if actual < file_count:
+                    status = "partial"
+            except Exception as e:
+                status = "failed"; err = str(e); print(f"[basic 오류] {e}")
+            _finish_send(log_id, "basic", email, requester, kakao, ip, summary, file_count, actual, status, url, err)
+        threading.Thread(target=worker, daemon=True).start()
+        return file_count
+
+    if mode == "specific":
+        selections = selections or []
+        summary_list = []
+        file_count = 0
+        for sel in selections:
+            docs = DOCUMENT_MAP.get(sel["product"], [])
+            labels = [docs[i].get("type", "파일") for i in sel["doc_indices"] if 0 <= i < len(docs)]
+            summary_list.append({"product": sel["product"], "labels": labels})
+            file_count += len(sel["doc_indices"])
+        summary_text = "; ".join(f"{s['product']}: " + ", ".join(s["labels"]) for s in summary_list)
+        payload = {"mode": "specific", "selections": selections}
+        log_id = _log_pending("specific", email, requester, kakao, ip, summary_text, file_count, payload)
+        def worker():
+            url = ""; actual = 0; status = "success"; err = ""
+            try:
+                url, actual = create_specific_zip(selections)
+                send_email_specific(email, summary_list, url)
+                if actual < file_count:
+                    status = "partial"
+            except Exception as e:
+                status = "failed"; err = str(e); print(f"[specific 오류] {e}")
+            _finish_send(log_id, "specific", email, requester, kakao, ip, summary_text, file_count, actual, status, url, err)
+        threading.Thread(target=worker, daemon=True).start()
+        return file_count
+
+    # all
+    products = products or []
+    file_count = sum(len(DOCUMENT_MAP.get(p, [])) for p in products)
+    summary = ", ".join(products)
+    payload = {"mode": "all", "products": products}
+    log_id = _log_pending("all", email, requester, kakao, ip, summary, file_count, payload)
+    def worker():
+        url = ""; actual = 0; status = "success"; err = ""
+        try:
+            url, actual = create_zip(products)
+            send_email(email, products, url)
+            if actual < file_count:
+                status = "partial"
+        except Exception as e:
+            status = "failed"; err = str(e); print(f"[all 오류] {e}")
+        _finish_send(log_id, "all", email, requester, kakao, ip, summary, file_count, actual, status, url, err)
+    threading.Thread(target=worker, daemon=True).start()
+    return file_count
+
+
 @app.route("/api/request", methods=["POST"])
 def api_request():
     if _rate_limited():
@@ -1816,27 +1887,9 @@ def api_request():
         return jsonify({"ok": False, "error": reason or "존재하지 않는 이메일 도메인입니다. 주소를 다시 확인해주세요."}), 400
 
     if mode == "basic":
-        doc_indices = data.get("doc_indices", [])
-        if doc_indices:
-            doc_labels = [COMPANY_DOCS_LIST[i]["label"] for i in doc_indices if i < len(COMPANY_DOCS_LIST)]
-        else:
-            doc_labels = [d["label"] for d in COMPANY_DOCS_LIST]
-        file_count = len(doc_labels)
-        summary = ", ".join(doc_labels)
-        log_id = _log_pending("basic", email, requester, kakao, client_ip, summary, file_count)
-        def process_basic():
-            url = ""; actual = 0; status = "success"; err = ""
-            try:
-                url, actual = create_basic_zip(doc_indices if doc_indices else None)
-                send_email_basic(email, url, doc_labels)
-                if actual < file_count:
-                    status = "partial"
-            except Exception as e:
-                status = "failed"; err = str(e)
-                print(f"[api/request basic 오류] {e}")
-            _finish_send(log_id, "basic", email, requester, kakao, client_ip,
-                         summary, file_count, actual, status, url, err)
-        threading.Thread(target=process_basic, daemon=True).start()
+        doc_indices = [i for i in data.get("doc_indices", [])
+                       if isinstance(i, int) and 0 <= i < len(COMPANY_DOCS_LIST)]
+        file_count = _dispatch_send("basic", email, requester, kakao, client_ip, doc_indices=doc_indices)
         return jsonify({"ok": True, "file_count": file_count})
 
     if mode == "specific":
@@ -1844,36 +1897,17 @@ def api_request():
         if not raw_selections:
             return jsonify({"ok": False, "error": "서류를 선택해주세요"}), 400
         selections = []
-        summary    = []
-        file_count = 0
         for sel in raw_selections:
             product = sel.get("product")
             if not product or product not in DOCUMENT_MAP:
                 return jsonify({"ok": False, "error": f'품목을 찾을 수 없습니다: {product or ""}'}), 400
             docs = DOCUMENT_MAP[product]
             idxs = [i for i in sel.get("doc_indices", []) if isinstance(i, int) and 0 <= i < len(docs)]
-            if not idxs:
-                continue
-            selections.append({"product": product, "doc_indices": idxs})
-            summary.append({"product": product, "labels": [docs[i].get("type", "파일") for i in idxs]})
-            file_count += len(idxs)
+            if idxs:
+                selections.append({"product": product, "doc_indices": idxs})
         if not selections:
             return jsonify({"ok": False, "error": "유효한 서류가 없습니다"}), 400
-        summary_text = "; ".join(f"{s['product']}: " + ", ".join(s["labels"]) for s in summary)
-        log_id = _log_pending("specific", email, requester, kakao, client_ip, summary_text, file_count)
-        def process_specific():
-            url = ""; actual = 0; status = "success"; err = ""
-            try:
-                url, actual = create_specific_zip(selections)
-                send_email_specific(email, summary, url)
-                if actual < file_count:
-                    status = "partial"
-            except Exception as e:
-                status = "failed"; err = str(e)
-                print(f"[api/request specific 오류] {e}")
-            _finish_send(log_id, "specific", email, requester, kakao, client_ip,
-                         summary_text, file_count, actual, status, url, err)
-        threading.Thread(target=process_specific, daemon=True).start()
+        file_count = _dispatch_send("specific", email, requester, kakao, client_ip, selections=selections)
         return jsonify({"ok": True, "file_count": file_count})
 
     # mode == "all"
@@ -1883,22 +1917,7 @@ def api_request():
     valid = [p for p in products if p in DOCUMENT_MAP]
     if not valid:
         return jsonify({"ok": False, "error": "유효한 품목이 없습니다"}), 400
-    file_count = sum(len(DOCUMENT_MAP.get(p, [])) for p in valid)
-    summary = ", ".join(valid)
-    log_id = _log_pending("all", email, requester, kakao, client_ip, summary, file_count)
-    def process_all():
-        url = ""; actual = 0; status = "success"; err = ""
-        try:
-            url, actual = create_zip(valid)
-            send_email(email, valid, url)
-            if actual < file_count:
-                status = "partial"
-        except Exception as e:
-            status = "failed"; err = str(e)
-            print(f"[api/request all 오류] {e}")
-        _finish_send(log_id, "all", email, requester, kakao, client_ip,
-                     summary, file_count, actual, status, url, err)
-    threading.Thread(target=process_all, daemon=True).start()
+    file_count = _dispatch_send("all", email, requester, kakao, client_ip, products=valid)
     return jsonify({"ok": True, "file_count": file_count})
 
 
@@ -1972,10 +1991,49 @@ def preview_doc():
     )
 
 
+def _age_hours(ts: str):
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        return (datetime.now(dt.tzinfo) - dt).total_seconds() / 3600
+    except Exception:
+        return None
+
+
+@app.route("/status/resend", methods=["POST"])
+def status_resend():
+    """영업사원용: 기록된 거래처 이메일로 동일 자료 재발송(원본 수신처로만)."""
+    email  = (request.form.get("email") or "").strip()
+    log_id = request.form.get("id", "")
+    back = f"/status?email={urllib.parse.quote(email)}&resent=1" if email else "/status"
+    if _rate_limited() or not (email and log_id.isdigit() and SUPABASE_URL and SUPABASE_KEY):
+        return redirect(back)
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/send_logs?select=email,payload&id=eq.{log_id}",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+            timeout=10,
+        )
+        rows = r.json() if r.status_code == 200 else []
+    except Exception as e:
+        print(f"[resend 조회 실패] {e}")
+        rows = []
+    if not rows or (rows[0].get("email") or "") != email:   # 이메일 일치할 때만 허용
+        return redirect(back)
+    payload = rows[0].get("payload") or {}
+    mode = payload.get("mode")
+    if mode in ("all", "specific", "basic"):
+        _dispatch_send(mode, email, "재전송", "", _client_ip(),
+                       products=payload.get("products"),
+                       selections=payload.get("selections"),
+                       doc_indices=payload.get("doc_indices"))
+    return redirect(back)
+
+
 @app.route("/status")
 def status_page():
-    """영업사원/요청자용: 발송받은 이메일로 본인 요청의 처리 상태 조회."""
+    """영업사원용: 거래처 수신 이메일로 발송 요청의 처리 현황 확인 + 재전송."""
     email = (request.args.get("email") or "").strip()
+    resent = request.args.get("resent") == "1"
     rows = []
     searched = bool(email)
     if email and re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", email) and SUPABASE_URL and SUPABASE_KEY:
@@ -1999,67 +2057,107 @@ def status_page():
 
     cards = ""
     for x in rows:
+        status = x.get("status")
         ts   = _esc(x.get("created_at", ""))[:16].replace("T", " ")
         cnt  = f'{x.get("files_actual", 0)}/{x.get("files_requested", 0)}'
         link = x.get("download_url") or ""
-        link_html = (f'<a class="dl" href="{_esc(link)}" target="_blank">📥 파일 다시 받기</a>'
-                     if link.startswith("http") else
-                     ('<span class="muted">처리 중…</span>' if x.get("status") == "처리중"
-                      else '<span class="muted">링크 없음</span>'))
+        age  = _age_hours(x.get("created_at", "") or "")
+        expired = age is not None and age >= 24
+        link_ok = status in ("success", "partial") and link.startswith("http") and not expired
+
+        # 링크 유효성 안내(영업사원 관점)
+        if status == "처리중":
+            info = '<span class="muted">발송 처리 중입니다…</span>'
+        elif link_ok:
+            rem = max(0, int(24 - age)) if age is not None else 24
+            info = (f'<a class="open" href="{_esc(link)}" target="_blank">내용 직접 확인</a>'
+                    f'<span class="valid">· 다운로드 링크 유효 (약 {rem}시간 남음)</span>')
+        elif status in ("success", "partial") and expired:
+            info = '<span class="exp">다운로드 링크 만료됨 (발송 후 24시간 경과)</span>'
+        else:
+            info = '<span class="exp">다운로드 링크 없음</span>'
+
+        # 재전송 버튼(완료/실패 건만, 거래처 수신처로만)
+        resend = ""
+        if status in ("success", "partial", "failed") and str(x.get("id", "")).isdigit():
+            resend = (
+                f'<form method="post" action="/status/resend" '
+                f'onsubmit="return confirm(\'{_esc(email)}\\n위 거래처로 동일 자료를 다시 발송할까요?\')">'
+                f'<input type="hidden" name="id" value="{x.get("id")}">'
+                f'<input type="hidden" name="email" value="{_esc(email)}">'
+                f'<button type="submit" class="resend">🔄 거래처에 재전송 요청</button>'
+                f'</form>'
+            )
+
         cards += (
             '<div class="card">'
-            f'<div class="row1"><span class="ts">{ts}</span>{sbadge(x.get("status"))}</div>'
+            f'<div class="row1"><span class="ts">{ts}</span>{sbadge(status)}</div>'
             f'<div class="sum">{_esc(x.get("summary"))}</div>'
-            f'<div class="row2"><span class="files">파일 {cnt}</span>{link_html}</div>'
+            f'<div class="files">발송 파일 {cnt}건</div>'
+            f'<div class="info">{info}</div>'
+            f'<div class="act">{resend}</div>'
             '</div>'
         )
     if searched and not rows:
-        cards = ('<div class="empty">해당 이메일로 접수된 요청이 없습니다.<br>'
-                 '이메일 주소가 정확한지 확인해 주세요. (발송받기로 입력한 주소)</div>')
+        cards = ('<div class="empty">해당 이메일로 접수된 <b>발송 요청이 없습니다.</b><br>'
+                 '거래처에 발송 요청하신 수신 이메일 주소가 정확한지 확인해 주세요.</div>')
 
-    intro = "" if searched else ('<div class="empty">발송받으신 <b>이메일 주소</b>를 입력하면 '
-                                 '최근 요청의 처리 상태를 확인할 수 있습니다.</div>')
+    intro = "" if searched else ('<div class="empty">거래처에 발송 요청하신 <b>수신 이메일 주소</b>를 입력하면<br>'
+                                 '요청이 정상 처리됐는지(발송 완료 여부)와 재전송을 진행할 수 있습니다.</div>')
+    banner = ('<div class="banner">✅ 재전송을 접수했습니다. 잠시 후 목록을 새로고침하면 새 발송 건이 표시됩니다.</div>'
+              if resent else "")
 
     html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>기술자료 발송 확인</title>
+<title>기술자료 발송 처리 현황</title>
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
 .header{{background:#003389;padding:20px;text-align:center}}
 .header img{{height:34px;filter:brightness(0) invert(1)}}
 .header div{{color:#fff;font-size:17px;font-weight:700;margin-top:8px}}
+.header .sub{{color:#aac4ff;font-size:12px;font-weight:400;margin-top:4px}}
 .search{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .search label{{font-size:13px;font-weight:700;color:#003389;display:block;margin-bottom:8px}}
 .search form{{display:flex;gap:8px}}
 .search input{{flex:1;min-width:0;padding:12px 14px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;outline:none;font-family:inherit}}
 .search input:focus{{border-color:#003389}}
 .search button{{flex-shrink:0;padding:0 18px;background:#003389;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}}
-.list{{padding:0 12px 24px}}
+.search .hint{{font-size:12px;color:#999;margin-top:8px}}
+.banner{{background:#e6f4ea;color:#1a7f37;margin:0 12px 4px;border-radius:10px;padding:11px 14px;font-size:13px;font-weight:600}}
+.list{{padding:4px 12px 24px}}
 .card{{background:#fff;border-radius:12px;padding:15px 16px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.06)}}
 .row1{{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}}
 .ts{{font-size:12px;color:#888}}
-.sum{{font-size:14px;color:#1a1a1a;line-height:1.5;word-break:break-all;margin-bottom:10px}}
-.row2{{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f0f3f8;padding-top:10px}}
-.files{{font-size:13px;color:#555;font-weight:600}}
-.dl{{font-size:13px;color:#003389;font-weight:700;text-decoration:none;border:1.5px solid #003389;border-radius:8px;padding:7px 12px}}
-.muted{{font-size:13px;color:#aaa}}
-.empty{{background:#fff;margin:12px;border-radius:12px;padding:28px 20px;text-align:center;color:#777;font-size:14px;line-height:1.7;box-shadow:0 1px 6px rgba(0,0,0,.06)}}
-.note{{font-size:12px;color:#999;text-align:center;padding:4px 20px 20px;line-height:1.7}}
+.sum{{font-size:14px;color:#1a1a1a;line-height:1.5;word-break:break-all;margin-bottom:8px}}
+.files{{font-size:13px;color:#555;font-weight:600;margin-bottom:8px}}
+.info{{font-size:12.5px;margin-bottom:12px;line-height:1.6}}
+.open{{color:#003389;font-weight:700;text-decoration:none;border-bottom:1px solid #9bb4e6}}
+.valid{{color:#888;margin-left:4px}}
+.exp{{color:#c0392b;font-weight:600}}
+.muted{{color:#aaa}}
+.act{{border-top:1px solid #f0f3f8;padding-top:11px}}
+.resend{{width:100%;padding:12px;background:#003389;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}}
+.resend:active{{background:#002270}}
+.empty{{background:#fff;margin:12px;border-radius:12px;padding:28px 20px;text-align:center;color:#777;font-size:14px;line-height:1.8;box-shadow:0 1px 6px rgba(0,0,0,.06)}}
+.note{{font-size:12px;color:#999;text-align:center;padding:4px 20px 22px;line-height:1.7}}
 </style></head><body>
 <div class="header">
   <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM">
-  <div>기술자료 발송 확인</div>
+  <div>기술자료 발송 처리 현황</div>
+  <div class="sub">영업사원용 · 거래처 발송 요청 처리 확인</div>
 </div>
 <div class="search">
-  <label>발송받은 이메일 주소</label>
+  <label>거래처(수신) 이메일 주소</label>
   <form method="get" action="/status">
-    <input type="email" name="email" value="{_esc(email)}" placeholder="example@company.com" autocomplete="off">
+    <input type="email" name="email" value="{_esc(email)}" placeholder="거래처에 발송 요청한 이메일" autocomplete="off">
     <button type="submit">조회</button>
   </form>
+  <div class="hint">기술자료를 발송 요청하신 거래처의 수신 이메일을 입력하세요.</div>
 </div>
+{banner}
 <div class="list">{intro}{cards}</div>
-<div class="note">※ 다운로드 링크는 발송 후 24시간 동안 유효합니다.<br>※ 문의: 담당 영업사원 또는 기술상담실(080-768-3030)</div>
+<div class="note">※ 다운로드 링크는 발송 후 24시간 동안 유효합니다. 만료 시 ‘재전송’으로 다시 보낼 수 있습니다.<br>※ 문의: 기술상담실(080-768-3030)</div>
 </body></html>"""
     return Response(html, mimetype="text/html; charset=utf-8")
 
