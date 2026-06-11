@@ -2,7 +2,7 @@ name: Refresh Product Docs
 
 on:
   schedule:
-    - cron: '0 0 * * 1-5'  # 평일 매일 00:00 UTC (09:00 KST)
+    - cron: '0 22 * * 0-4'  # 평일(KST) 07:00 = 전날 22:00 UTC (UTC 일~목)
   workflow_dispatch:        # 수동 실행
 
 jobs:
