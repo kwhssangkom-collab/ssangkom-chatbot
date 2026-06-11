@@ -1892,12 +1892,24 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
     return Response(html, mimetype="text/html; charset=utf-8")
 
 
+def _key_role(key: str):
+    """JWT의 role만 디코드(값 노출 없음). 'service_role'/'anon' 확인용."""
+    try:
+        payload = key.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        return json.loads(base64.urlsafe_b64decode(payload)).get("role")
+    except Exception:
+        return None
+
+
 @app.route("/health")
 def health():
     return jsonify({
         "status": "ok",
         "products": len(PRODUCT_NAMES),
-        "total_files": sum(len(v) for v in DOCUMENT_MAP.values())
+        "total_files": sum(len(v) for v in DOCUMENT_MAP.values()),
+        "supabase_configured": bool(SUPABASE_URL and SUPABASE_KEY),
+        "supabase_key_role": _key_role(SUPABASE_KEY or ""),  # service_role 이면 Render env 반영됨
     })
 
 
