@@ -1052,7 +1052,7 @@ def admin_logs():
 
     html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>쌍곰봇 발송 기록</title>
+<title>쌍곰봇 기술자료 발송 기록</title>
 <style>
 *{{box-sizing:border-box}} body{{margin:0;font-family:'Malgun Gothic',sans-serif;background:#f0f3f8;color:#222}}
 .top{{background:#003389;color:#fff;padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}}
@@ -1070,7 +1070,7 @@ a{{color:#003389}}
 .refresh{{margin-left:auto;color:#fff;font-size:13px;text-decoration:none;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:8px}}
 </style></head><body>
 <div class="top">
-  <h1>📋 발송 기록</h1>
+  <h1>📋 기술자료 발송 기록</h1>
   <span class="stat">총 {len(rows)}</span>
   <span class="stat">성공 {n_ok}</span>
   <span class="stat">부분 {n_part}</span>
