@@ -32,7 +32,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=263"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=263",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%ED%94%BD%EC%8A%A4%20PC-7000DL/%EB%82%B4%ED%95%9C%20PC-7000DL%5B%EA%B5%AD%EB%AC%B8%5D.jpg",
+      "filename": "내한 PC-7000DL[국문].jpg"
     },
     {
       "type": "시험성적서",
@@ -182,7 +184,9 @@
     },
     {
       "type": "인증서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=253"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=253",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A0/page-0002.jpg",
+      "filename": "page-0002.jpg"
     },
     {
       "type": "시험성적서",
@@ -276,11 +280,15 @@
   "드라이픽스Ⅱ": [
     {
       "type": "MSDS",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=37"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=37",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1/document_37_20260611_112510.zip",
+      "filename": "document_37_20260611_112510.zip"
     },
     {
       "type": "MSDS",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=122"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=122",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1/document_122_20260611_112511.zip",
+      "filename": "document_122_20260611_112511.zip"
     },
     {
       "type": "기술자료",
@@ -302,11 +310,15 @@
     },
     {
       "type": "인증서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=254"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=254",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1/page-0001.jpg",
+      "filename": "page-0001.jpg"
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=265"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=265",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1/document_265_20260611_112512.zip",
+      "filename": "document_265_20260611_112512.zip"
     },
     {
       "type": "시험성적서",
@@ -324,15 +336,21 @@
   "드라이픽스Ⅱ 방수용": [
     {
       "type": "MSDS",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=38"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=38",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1%20%EB%B0%A9%EC%88%98%EC%9A%A9/document_38_20260611_112512.zip",
+      "filename": "document_38_20260611_112512.zip"
     },
     {
       "type": "MSDS",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=123"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=123",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1%20%EB%B0%A9%EC%88%98%EC%9A%A9/document_123_20260611_112513.zip",
+      "filename": "document_123_20260611_112513.zip"
     },
     {
       "type": "기술자료",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=150"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=150",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1%20%EB%B0%A9%EC%88%98%EC%9A%A9/document_150_20260611_112514.zip",
+      "filename": "document_150_20260611_112514.zip"
     },
     {
       "type": "기술자료",
@@ -348,7 +366,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=285"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=285",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1%20%EB%B0%A9%EC%88%98%EC%9A%A9/document_285_20260611_112514.zip",
+      "filename": "document_285_20260611_112514.zip"
     },
     {
       "type": "성과대비표",
@@ -510,7 +530,9 @@
     },
     {
       "type": "성과대비표",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=445"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=445",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%99%94%EC%9D%B4%ED%8A%B8%EB%A9%98%ED%8A%B8%E2%85%A0%28%EC%95%95%EC%B0%A9%EB%B0%B1%EC%83%89%29/document_445_20260611_112515.zip",
+      "filename": "document_445_20260611_112515.zip"
     }
   ],
   "쌍곰 백시멘트Ⅰ(내장전용)": [
@@ -534,7 +556,9 @@
     },
     {
       "type": "인증서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=256"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=256",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EB%B0%B1%EC%8B%9C%EB%A9%98%ED%8A%B8%E2%85%A0%28%EB%82%B4%EC%9E%A5%EC%A0%84%EC%9A%A9%29/page-0001.jpg",
+      "filename": "page-0001.jpg"
     },
     {
       "type": "시험성적서",
@@ -550,7 +574,9 @@
     },
     {
       "type": "성과대비표",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=448"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=448",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EB%B0%B1%EC%8B%9C%EB%A9%98%ED%8A%B8%E2%85%A0%28%EB%82%B4%EC%9E%A5%EC%A0%84%EC%9A%A9%29/document_448_20260611_112516.zip",
+      "filename": "document_448_20260611_112516.zip"
     }
   ],
   "홈멘트Ⅰ(소포장 내장줄눈)": [
@@ -600,11 +626,15 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=305"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=305",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%B9%BC%EB%9D%BC%ED%99%88%EB%A9%98%ED%8A%B8%E2%85%A1/document_305_20260611_112517.zip",
+      "filename": "document_305_20260611_112517.zip"
     },
     {
       "type": "성과대비표",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=438"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=438",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%B9%BC%EB%9D%BC%ED%99%88%EB%A9%98%ED%8A%B8%E2%85%A1/document_438_20260611_112518.zip",
+      "filename": "document_438_20260611_112518.zip"
     }
   ],
   "쌍곰 탄성줄눈(내장줄눈)": [
@@ -622,7 +652,9 @@
     },
     {
       "type": "인증서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=349"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=349",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%ED%83%84%EC%84%B1%EC%A4%84%EB%88%88%28%EB%82%B4%EC%9E%A5%EC%A4%84%EB%88%88%29/%EC%8C%8D%EA%B3%B0%ED%83%84%EC%84%B1%EC%A4%84%EB%88%88%2027.1.28%20%EA%B9%8C%EC%A7%80.jpg",
+      "filename": "쌍곰탄성줄눈 27.1.28 까지.jpg"
     },
     {
       "type": "MSDS",
@@ -632,7 +664,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=400"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=400",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%ED%83%84%EC%84%B1%EC%A4%84%EB%88%88%28%EB%82%B4%EC%9E%A5%EC%A4%84%EB%88%88%29/document_400_20260611_112519.zip",
+      "filename": "document_400_20260611_112519.zip"
     },
     {
       "type": "성과대비표",
@@ -974,7 +1008,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=309"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=309",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%AA%B0%EA%B7%B8%EB%A6%B0%20M-2000/%EB%AA%B0%EA%B7%B8%EB%A6%B0%5B%EA%B5%AD%EB%AC%B8%5D-Q%EC%8B%9C%ED%97%98%EC%84%B1%EC%A0%81%EC%84%9C.jpg",
+      "filename": "몰그린[국문]-Q시험성적서.jpg"
     },
     {
       "type": "인증서",
@@ -1010,7 +1046,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=266"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=266",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%AA%B0%EA%B7%B8%EB%A6%B0%20M-3000/%EB%82%B4%ED%95%9C%20%EB%AA%B0%EA%B7%B8%EB%A6%B03000%5B%EA%B5%AD%EB%AC%B8%5D.jpg",
+      "filename": "내한 몰그린3000[국문].jpg"
     },
     {
       "type": "시험성적서",
@@ -1144,7 +1182,9 @@
     },
     {
       "type": "인증서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=259"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=259",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%88%98%EC%84%B1%EB%A0%88%EC%9D%B8%EC%94%B0/page-0005.jpg",
+      "filename": "page-0005.jpg"
     },
     {
       "type": "시험성적서",
@@ -1180,7 +1220,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=268"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=268",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%96%BC%EC%A7%80%EB%A7%88/document_268_20260611_112521.zip",
+      "filename": "document_268_20260611_112521.zip"
     },
     {
       "type": "성과대비표",
@@ -1210,7 +1252,9 @@
     },
     {
       "type": "인증서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=252"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=252",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A0%EB%82%9C%EB%B0%A9%EC%9A%A9/page-0003.jpg",
+      "filename": "page-0003.jpg"
     },
     {
       "type": "시험성적서",
@@ -1226,7 +1270,9 @@
     },
     {
       "type": "성과대비표",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=408"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=408",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A0%EB%82%9C%EB%B0%A9%EC%9A%A9/document_408_20260611_112523.zip",
+      "filename": "document_408_20260611_112523.zip"
     }
   ],
   "드라이픽스Ⅰ속경성": [
@@ -1390,7 +1436,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=300"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=300",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EB%96%A0%EB%B6%99%EC%9E%84%EB%AA%B0%28%ED%9A%8C%EC%83%89%EB%B0%B1%EC%83%89%29/%EC%8C%8D%EA%B3%B0%EB%96%A0%EB%B6%99%EC%9E%84%EB%AA%B0%5B%EA%B5%AD%EB%AC%B8%5D.jpg",
+      "filename": "쌍곰떠붙임몰[국문].jpg"
     }
   ],
   "쌍곰 백시멘트Ⅱ(내장전용)": [
@@ -1414,7 +1462,9 @@
     },
     {
       "type": "인증서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=256"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=256",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EB%B0%B1%EC%8B%9C%EB%A9%98%ED%8A%B8%E2%85%A1%28%EB%82%B4%EC%9E%A5%EC%A0%84%EC%9A%A9%29/page-0001.jpg",
+      "filename": "page-0001.jpg"
     },
     {
       "type": "시험성적서",
@@ -1496,7 +1546,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=296"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=296",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20ALC%EC%88%98%EC%A7%80%EB%AA%B0%ED%83%88%28%EB%AF%B8%EC%9E%A5%EC%9A%A9%29/document_296_20260611_112524.zip",
+      "filename": "document_296_20260611_112524.zip"
     }
   ],
   "쌍곰 ALC수지몰탈(조적용)": [
@@ -1514,7 +1566,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=297"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=297",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20ALC%EC%88%98%EC%A7%80%EB%AA%B0%ED%83%88%28%EC%A1%B0%EC%A0%81%EC%9A%A9%29/document_297_20260611_112525.zip",
+      "filename": "document_297_20260611_112525.zip"
     }
   ],
   "쌍곰 수지미장": [
@@ -1620,7 +1674,9 @@
     },
     {
       "type": "성과대비표",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=416"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=416",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%AA%B0%ED%94%BD%EC%8A%A4%209000/document_416_20260611_112526.zip",
+      "filename": "document_416_20260611_112526.zip"
     }
   ],
   "쌍곰 스치로본드": [
@@ -1650,7 +1706,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=321"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=321",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%8A%A4%EC%B9%98%EB%A1%9C%EB%B3%B8%EB%93%9C/%EC%8C%8D%EA%B3%B0%EC%8A%A4%EC%B9%98%EB%A1%9C%EB%B3%B8%EB%93%9C.jpg",
+      "filename": "쌍곰스치로본드.jpg"
     }
   ],
   "에코하드너": [
@@ -1736,7 +1794,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=324"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=324",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%ED%8F%BC/document_324_20260611_112527.zip",
+      "filename": "document_324_20260611_112527.zip"
     }
   ],
   "수성 지물용 본드 700": [
@@ -1760,7 +1820,9 @@
     },
     {
       "type": "성과대비표",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=436"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=436",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%88%98%EC%84%B1%20%EC%A7%80%EB%AC%BC%EC%9A%A9%20%EB%B3%B8%EB%93%9C%20700/document_436_20260611_112528.zip",
+      "filename": "document_436_20260611_112528.zip"
     },
     {
       "type": "인증서",
@@ -1862,7 +1924,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=317"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=317",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%88%98%EC%84%B1%EB%A0%88%EC%9D%B8%EC%94%B0%20%EC%84%9D%EA%B3%A0%EB%B3%B4%EB%93%9C%EC%9A%A9/%EC%88%98%EC%84%B1%EB%A0%88%EC%9D%B8%EC%94%B0%28%EC%84%9D%EA%B3%A0%EB%B3%B4%EB%93%9C%EC%9A%A9%29%5B%EA%B5%AD%EB%AC%B8%5D.jpg",
+      "filename": "수성레인씰(석고보드용)[국문].jpg"
     },
     {
       "type": "인증서",
@@ -1950,7 +2014,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=264"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=264",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%ED%94%BD%EC%8A%A4%20PC-7000RM%28%EA%B1%B4%EC%84%A4%EC%9A%A9%29/%EB%82%B4%ED%95%9C%20PC-7000RM%5B%EA%B5%AD%EB%AC%B8%5D.jpg",
+      "filename": "내한 PC-7000RM[국문].jpg"
     },
     {
       "type": "시험성적서",
@@ -2174,7 +2240,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=325"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=325",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%ED%8F%BC%EB%B3%B8%EB%93%9C/%EC%8C%8D%EA%B3%B0%ED%8F%BC%EB%B3%B8%EB%93%9C%5B%EA%B5%AD%EB%AC%B8%5D-%EC%8B%9C%ED%97%98%EC%84%B1%EC%A0%81%EC%84%9C.jpg",
+      "filename": "쌍곰폼본드[국문]-시험성적서.jpg"
     }
   ],
   "쌍곰 핫멜트 SK-7070": [
@@ -2284,7 +2352,9 @@
     },
     {
       "type": "인증서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=375"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=375",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%94%BD%EC%8A%A4/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%94%BD%EC%8A%A4%2027.1.28%20%EA%B9%8C%EC%A7%80.jpg",
+      "filename": "퍼펙트픽스 27.1.28 까지.jpg"
     },
     {
       "type": "성과대비표",
@@ -2314,7 +2384,9 @@
     },
     {
       "type": "성과대비표",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=441"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=441",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%EB%9D%BC%EC%9D%B8%28%EC%86%8C%ED%8F%AC%EC%9E%A5%20%EB%82%B4%EC%9E%A5%EC%A4%84%EB%88%88%29/document_441_20260611_112531.zip",
+      "filename": "document_441_20260611_112531.zip"
     },
     {
       "type": "인증서",
@@ -2506,7 +2578,9 @@
   "쌍곰견출몰탈": [
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=377"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=377",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%EA%B2%AC%EC%B6%9C%EB%AA%B0%ED%83%88/%EA%B2%AC%EC%B6%9C%EB%AA%B0%ED%83%88%5B%EA%B5%AD%EB%AC%B8%5D.jpg",
+      "filename": "견출몰탈[국문].jpg"
     },
     {
       "type": "MSDS",
@@ -2646,7 +2720,9 @@
     },
     {
       "type": "시험성적서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=337"
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=337",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%9E%90%EB%8F%99%EC%88%98%ED%8F%89%EB%AA%B0%ED%83%88%20SL-30%28%ED%9B%84%EB%8F%84%EC%9A%A9%29/document_337_20260611_112532.zip",
+      "filename": "document_337_20260611_112532.zip"
     }
   ]
 }

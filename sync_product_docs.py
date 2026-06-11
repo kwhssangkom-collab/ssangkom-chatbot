@@ -9,6 +9,7 @@ document_map.json에 github_url / filename 필드를 추가한다.
 로컬 PC 또는 GitHub Actions에서 실행 (ssangkom.co.kr 접근 가능 환경).
 """
 import json
+import mimetypes
 import os
 import re
 import sys
@@ -79,17 +80,22 @@ def main():
                     errors += 1
                     continue
 
-                if not resp.content.startswith(b"%PDF"):
-                    print(f"[{done}/{total}] NOT PDF ({len(resp.content)}B): {url}")
+                ctype = resp.headers.get("Content-Type", "").lower()
+                # HTML(Incapsula 차단/오류 페이지) 또는 빈 응답만 거름. PDF/JPG/PNG/ZIP 등 모두 허용.
+                if (not resp.content
+                        or "text/html" in ctype
+                        or resp.content.lstrip()[:1] == b"<"):
+                    print(f"[{done}/{total}] 비정상 응답(차단 추정), 건너뜀: {url}")
                     errors += 1
                     continue
 
                 cd       = resp.headers.get("Content-Disposition", "")
                 filename = parse_cd_filename(cd)
                 if not filename:
-                    filename = f"{safe_name(doc.get('type', '파일'))}_{i}.pdf"
+                    ext = mimetypes.guess_extension(ctype.split(";")[0].strip()) or ".bin"
+                    filename = f"{safe_name(doc.get('type', '파일'))}_{i}{ext}"
                 safe_fname = safe_name(filename)
-                if not safe_fname.lower().endswith(".pdf"):
+                if "." not in safe_fname:        # 확장자 없으면 PDF 가정(과거 호환)
                     safe_fname += ".pdf"
 
                 filepath = os.path.join(folder_dir, safe_fname)

@@ -271,9 +271,9 @@ def create_zip(product_names: list[str]) -> str:
                         if resp.status_code != 200:
                             print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {fetch_url}")
                             continue
-                        # PDF 서명 확인
-                        if not resp.content.startswith(b"%PDF"):
-                            print(f"PDF가 아닌 응답 수신 (건너뜀): {fetch_url} - 첫 bytes: {resp.content[:40]}")
+                        # HTML(차단/오류 페이지)·빈 응답만 거름 (PDF/JPG/ZIP 등 모두 허용)
+                        if not resp.content or resp.content.lstrip()[:1] == b"<":
+                            print(f"비정상 응답(차단 추정, 건너뜀): {fetch_url} - 첫 bytes: {resp.content[:40]}")
                             continue
                         # 파일명 결정: 캐시된 filename → Content-Disposition → 타입+인덱스
                         if doc.get("filename"):
@@ -360,8 +360,8 @@ def create_specific_zip(selections: list) -> str:
                         if resp.status_code != 200:
                             print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {fetch_url}")
                             continue
-                        if not resp.content.startswith(b"%PDF"):
-                            print(f"PDF가 아닌 응답 수신 (건너뜀): {fetch_url}")
+                        if not resp.content or resp.content.lstrip()[:1] == b"<":
+                            print(f"비정상 응답(차단 추정, 건너뜀): {fetch_url}")
                             continue
                         if doc.get("filename"):
                             safe_filename = re.sub(r'[/\\:*?"<>|]', '', doc["filename"])
@@ -1762,9 +1762,22 @@ def api_product_docs():
     })
 
 
+def _sniff_content(content: bytes):
+    """매직바이트로 (mimetype, disposition) 결정. PDF/이미지는 inline, 그 외는 download."""
+    if content.startswith(b"%PDF"):
+        return "application/pdf", "inline"
+    if content[:3] == b"\xff\xd8\xff":
+        return "image/jpeg", "inline"
+    if content[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png", "inline"
+    if content[:2] == b"PK":
+        return "application/zip", "attachment"
+    return "application/octet-stream", "attachment"
+
+
 @app.route("/preview")
 def preview_doc():
-    """선택한 서류 PDF를 브라우저에서 인라인으로 미리보기."""
+    """선택한 서류를 브라우저에서 열어보기 (PDF/이미지는 인라인, ZIP 등은 다운로드)."""
     product = request.args.get("product", "")
     try:
         idx = int(request.args.get("index", "-1"))
@@ -1776,19 +1789,21 @@ def preview_doc():
     doc = docs[idx]
     fetch_url = doc.get("github_url") or doc.get("url")
     if not fetch_url:
-        return "미리보기 주소가 없습니다", 404
+        return "파일을 불러올 수 없습니다 (원본 미캐싱)", 404
     try:
         resp = requests.get(fetch_url, headers=HEADERS, timeout=20)
     except Exception:
-        return "미리보기를 불러올 수 없습니다", 502
-    if resp.status_code != 200 or not resp.content.startswith(b"%PDF"):
-        return "미리보기를 불러올 수 없습니다", 502
-    fname = doc.get("filename") or f"{doc.get('type', '파일')}.pdf"
+        return "파일을 불러올 수 없습니다", 502
+    # HTML(차단/오류 페이지)·빈 응답 거름
+    if resp.status_code != 200 or not resp.content or resp.content.lstrip()[:1] == b"<":
+        return "파일을 불러올 수 없습니다 (원본 접근 불가)", 502
+    ctype, disp = _sniff_content(resp.content)
+    fname = doc.get("filename") or f"{doc.get('type', '파일')}"
     quoted = urllib.parse.quote(fname)
     return Response(
         resp.content,
-        mimetype="application/pdf",
-        headers={"Content-Disposition": f"inline; filename*=UTF-8''{quoted}"},
+        mimetype=ctype,
+        headers={"Content-Disposition": f"{disp}; filename*=UTF-8''{quoted}"},
     )
 
 
