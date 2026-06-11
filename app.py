@@ -47,6 +47,42 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_SERVICE_KEY") or
 SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "ssangkom-zips")
 LINK_TTL_SECONDS = 86400  # 24시간
 
+# 관리자 엔드포인트 보호 (미설정 시 /admin/* 비활성 — fail-closed)
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+
+# 발송 남용 방지: IP 레이트리밋 + ZIP 동시 생성 제한(OOM 방지)
+RATE_PER_MIN  = int(os.getenv("RATE_PER_MIN", "5"))
+RATE_PER_HOUR = int(os.getenv("RATE_PER_HOUR", "30"))
+_rate_lock = threading.Lock()
+_rate_hits: dict = {}              # {ip: [timestamps]}
+_zip_semaphore = threading.Semaphore(2)  # 동시 ZIP 생성 최대 2건
+
+
+def _client_ip() -> str:
+    xff = request.headers.get("X-Forwarded-For", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def _rate_limited() -> bool:
+    """IP당 분/시간 한도 초과 시 True. 인메모리 슬라이딩 윈도우."""
+    now = datetime.now().timestamp()
+    ip  = _client_ip()
+    with _rate_lock:
+        hits = [t for t in _rate_hits.get(ip, []) if now - t < 3600]
+        per_min = sum(1 for t in hits if now - t < 60)
+        if per_min >= RATE_PER_MIN or len(hits) >= RATE_PER_HOUR:
+            _rate_hits[ip] = hits
+            return True
+        hits.append(now)
+        _rate_hits[ip] = hits
+        # 메모리 누수 방지: 가끔 빈 항목 정리
+        if len(_rate_hits) > 5000:
+            for k in [k for k, v in _rate_hits.items() if not v or now - v[-1] > 3600]:
+                _rate_hits.pop(k, None)
+        return False
+
 TEMP_DIR = os.path.join(os.getenv("TMPDIR", "/tmp"), "ssangkom_zips")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
@@ -193,41 +229,42 @@ def _parse_cd_filename(cd_header: str) -> str | None:
 
 
 def create_zip(product_names: list[str]) -> str:
-    """품목들의 파일을 ZIP으로 묶고 임시 다운로드 URL 반환"""
-    zip_buffer = io.BytesIO()
-
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for product in product_names:
-            docs = DOCUMENT_MAP.get(product, [])
-            safe_folder = re.sub(r'[/\\:*?"<>|]', '', product)
-            for i, doc in enumerate(docs, 1):
-                try:
-                    # github_url 캐시 우선 사용 (Incapsula 우회)
-                    fetch_url = doc.get("github_url") or doc["url"]
-                    resp = requests.get(fetch_url, headers=HEADERS, timeout=20)
-                    if resp.status_code != 200:
-                        print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {fetch_url}")
-                        continue
-                    # PDF 서명 확인
-                    if not resp.content.startswith(b"%PDF"):
-                        print(f"PDF가 아닌 응답 수신 (건너뜀): {fetch_url} - 첫 bytes: {resp.content[:40]}")
-                        continue
-                    # 파일명 결정: 캐시된 filename → Content-Disposition → 타입+인덱스
-                    if doc.get("filename"):
-                        safe_filename = re.sub(r'[/\\:*?"<>|]', '', doc["filename"])
-                    else:
-                        cd = resp.headers.get("Content-Disposition", "")
-                        real_name = _parse_cd_filename(cd)
-                        if real_name:
-                            safe_filename = re.sub(r'[/\\:*?"<>|]', '', real_name)
+    """품목들의 파일을 ZIP으로 묶고 임시 다운로드 URL 반환 (디스크 스트리밍)"""
+    file_id  = str(uuid.uuid4())
+    zip_path = os.path.join(TEMP_DIR, f"{file_id}.zip")
+    with _zip_semaphore:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for product in product_names:
+                docs = DOCUMENT_MAP.get(product, [])
+                safe_folder = re.sub(r'[/\\:*?"<>|]', '', product)
+                for i, doc in enumerate(docs, 1):
+                    try:
+                        # github_url 캐시 우선 사용 (Incapsula 우회)
+                        fetch_url = doc.get("github_url") or doc["url"]
+                        resp = requests.get(fetch_url, headers=HEADERS, timeout=20)
+                        if resp.status_code != 200:
+                            print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {fetch_url}")
+                            continue
+                        # PDF 서명 확인
+                        if not resp.content.startswith(b"%PDF"):
+                            print(f"PDF가 아닌 응답 수신 (건너뜀): {fetch_url} - 첫 bytes: {resp.content[:40]}")
+                            continue
+                        # 파일명 결정: 캐시된 filename → Content-Disposition → 타입+인덱스
+                        if doc.get("filename"):
+                            safe_filename = re.sub(r'[/\\:*?"<>|]', '', doc["filename"])
                         else:
-                            doc_type = doc.get("type", "파일")
-                            safe_filename = f"{doc_type}_{i}.pdf"
-                    zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
-                except Exception as e:
-                    print(f"파일 다운로드 실패: {doc['url']} - {e}")
+                            cd = resp.headers.get("Content-Disposition", "")
+                            real_name = _parse_cd_filename(cd)
+                            if real_name:
+                                safe_filename = re.sub(r'[/\\:*?"<>|]', '', real_name)
+                            else:
+                                doc_type = doc.get("type", "파일")
+                                safe_filename = f"{doc_type}_{i}.pdf"
+                        zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
+                    except Exception as e:
+                        print(f"파일 다운로드 실패: {doc['url']} - {e}")
 
-    return _save_zip_temp(zip_buffer)
+    return _finalize_zip(file_id, zip_path)
 
 
 def _cleanup(path: str, file_id: str):
@@ -236,18 +273,19 @@ def _cleanup(path: str, file_id: str):
     expiry_map.pop(file_id, None)
 
 
-def _upload_to_supabase(file_id: str, data: bytes) -> str | None:
-    """ZIP을 Supabase Storage(public 버킷)에 올리고 직접 다운로드 URL 반환. 실패 시 None."""
+def _upload_to_supabase(file_id: str, zip_path: str) -> str | None:
+    """디스크의 ZIP을 Supabase Storage(public 버킷)에 스트리밍 업로드 후 직접 URL 반환."""
     if not (SUPABASE_URL and SUPABASE_KEY):
         return None
     path = f"{file_id}.zip"
     auth = {"Authorization": f"Bearer {SUPABASE_KEY}", "apikey": SUPABASE_KEY}
     try:
-        up = requests.post(
-            f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{path}",
-            headers={**auth, "Content-Type": "application/zip", "x-upsert": "true"},
-            data=data, timeout=60,
-        )
+        with open(zip_path, "rb") as f:
+            up = requests.post(
+                f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{path}",
+                headers={**auth, "Content-Type": "application/zip"},  # 새 UUID라 upsert 불필요(SELECT 권한 회피)
+                data=f, timeout=120,   # 파일 객체 → requests가 스트리밍(메모리 절약)
+            )
         if up.status_code not in (200, 201):
             print(f"[Supabase 업로드 실패 {up.status_code}] {up.text[:200]}")
             return None
@@ -258,19 +296,16 @@ def _upload_to_supabase(file_id: str, data: bytes) -> str | None:
         return None
 
 
-def _save_zip_temp(zip_buffer: io.BytesIO) -> str:
-    """ZIP 저장 후 다운로드 URL 반환. Supabase 우선, 실패 시 로컬 임시파일 폴백."""
-    file_id = str(uuid.uuid4())
-    data = zip_buffer.getvalue()
-
-    url = _upload_to_supabase(file_id, data)
+def _finalize_zip(file_id: str, zip_path: str) -> str:
+    """디스크 ZIP을 업로드(Supabase 우선)하고 URL 반환. 실패 시 로컬 폴백 유지."""
+    url = _upload_to_supabase(file_id, zip_path)
     if url:
+        try:
+            os.remove(zip_path)        # 업로드 성공 시 로컬본 제거
+        except OSError:
+            pass
         return url
-
-    # 폴백: 로컬 임시 파일 + /download (서버 재시작 시 만료될 수 있음)
-    zip_path = os.path.join(TEMP_DIR, f"{file_id}.zip")
-    with open(zip_path, "wb") as f:
-        f.write(data)
+    # 폴백: 로컬 임시 파일 유지 + /download (서버 재시작 시 만료될 수 있음)
     expiry_map[file_id] = datetime.now() + timedelta(hours=24)
     timer = threading.Timer(LINK_TTL_SECONDS, lambda: _cleanup(zip_path, file_id))
     timer.daemon = True
@@ -280,40 +315,42 @@ def _save_zip_temp(zip_buffer: io.BytesIO) -> str:
 
 def create_specific_zip(selections: list) -> str:
     """selections: [{"product": str, "doc_indices": list[int]}, ...]"""
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for sel in selections:
-            product    = sel.get("product", "")
-            doc_indices = sel.get("doc_indices", [])
-            docs = DOCUMENT_MAP.get(product, [])
-            safe_folder = re.sub(r'[/\\:*?"<>|]', '', product)
-            for idx in doc_indices:
-                if idx < 0 or idx >= len(docs):
-                    continue
-                doc = docs[idx]
-                try:
-                    fetch_url = doc.get("github_url") or doc["url"]
-                    resp = requests.get(fetch_url, headers=HEADERS, timeout=20)
-                    if resp.status_code != 200:
-                        print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {fetch_url}")
+    file_id  = str(uuid.uuid4())
+    zip_path = os.path.join(TEMP_DIR, f"{file_id}.zip")
+    with _zip_semaphore:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for sel in selections:
+                product    = sel.get("product", "")
+                doc_indices = sel.get("doc_indices", [])
+                docs = DOCUMENT_MAP.get(product, [])
+                safe_folder = re.sub(r'[/\\:*?"<>|]', '', product)
+                for idx in doc_indices:
+                    if idx < 0 or idx >= len(docs):
                         continue
-                    if not resp.content.startswith(b"%PDF"):
-                        print(f"PDF가 아닌 응답 수신 (건너뜀): {fetch_url}")
-                        continue
-                    if doc.get("filename"):
-                        safe_filename = re.sub(r'[/\\:*?"<>|]', '', doc["filename"])
-                    else:
-                        cd = resp.headers.get("Content-Disposition", "")
-                        real_name = _parse_cd_filename(cd)
-                        if real_name:
-                            safe_filename = re.sub(r'[/\\:*?"<>|]', '', real_name)
+                    doc = docs[idx]
+                    try:
+                        fetch_url = doc.get("github_url") or doc["url"]
+                        resp = requests.get(fetch_url, headers=HEADERS, timeout=20)
+                        if resp.status_code != 200:
+                            print(f"파일 다운로드 실패 (HTTP {resp.status_code}): {fetch_url}")
+                            continue
+                        if not resp.content.startswith(b"%PDF"):
+                            print(f"PDF가 아닌 응답 수신 (건너뜀): {fetch_url}")
+                            continue
+                        if doc.get("filename"):
+                            safe_filename = re.sub(r'[/\\:*?"<>|]', '', doc["filename"])
                         else:
-                            doc_type = doc.get("type", "파일")
-                            safe_filename = f"{doc_type}_{idx + 1}.pdf"
-                    zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
-                except Exception as e:
-                    print(f"파일 다운로드 실패: {doc.get('url', '')} - {e}")
-    return _save_zip_temp(zip_buffer)
+                            cd = resp.headers.get("Content-Disposition", "")
+                            real_name = _parse_cd_filename(cd)
+                            if real_name:
+                                safe_filename = re.sub(r'[/\\:*?"<>|]', '', real_name)
+                            else:
+                                doc_type = doc.get("type", "파일")
+                                safe_filename = f"{doc_type}_{idx + 1}.pdf"
+                        zf.writestr(f"{safe_folder}/{safe_filename}", resp.content)
+                    except Exception as e:
+                        print(f"파일 다운로드 실패: {doc.get('url', '')} - {e}")
+    return _finalize_zip(file_id, zip_path)
 
 
 def create_basic_zip(doc_indices: list = None) -> str:
@@ -322,17 +359,19 @@ def create_basic_zip(doc_indices: list = None) -> str:
         docs = [COMPANY_DOCS_LIST[i] for i in doc_indices if 0 <= i < len(COMPANY_DOCS_LIST)]
     else:
         docs = COMPANY_DOCS_LIST
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for doc in docs:
-            try:
-                resp = requests.get(doc["url"], headers=HEADERS, timeout=20)
-                if resp.status_code == 200:
-                    filename = f"{doc['label']}.{doc['ext']}"
-                    zf.writestr(filename, resp.content)
-            except Exception as e:
-                print(f"기본서류 다운로드 실패: {doc['url']} - {e}")
-    return _save_zip_temp(zip_buffer)
+    file_id  = str(uuid.uuid4())
+    zip_path = os.path.join(TEMP_DIR, f"{file_id}.zip")
+    with _zip_semaphore:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for doc in docs:
+                try:
+                    resp = requests.get(doc["url"], headers=HEADERS, timeout=20)
+                    if resp.status_code == 200:
+                        filename = f"{doc['label']}.{doc['ext']}"
+                        zf.writestr(filename, resp.content)
+                except Exception as e:
+                    print(f"기본서류 다운로드 실패: {doc['url']} - {e}")
+    return _finalize_zip(file_id, zip_path)
 
 
 # ═══════════════════════════════════════════════════
@@ -671,9 +710,12 @@ def list_card_response(title: str, items: list[str], message: str) -> dict:
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.json
-    user_id = data["userRequest"]["user"]["id"]
-    utterance = data["userRequest"]["utterance"].strip()
+    data = request.json or {}
+    try:
+        user_id = data["userRequest"]["user"]["id"]
+        utterance = data["userRequest"]["utterance"].strip()
+    except (KeyError, TypeError, AttributeError):
+        return jsonify(text_response("요청을 처리할 수 없습니다. 다시 시도해주세요."))
 
     session = sessions.get(user_id, {"step": "search"})
 
@@ -866,7 +908,9 @@ def download_zip(file_id: str):
 
 @app.route("/admin/send-test", methods=["POST"])
 def admin_send_test():
-    """관리자용: 품목 + 이메일 지정해서 즉시 발송 테스트"""
+    """관리자용: 품목 + 이메일 지정해서 즉시 발송 테스트 (ADMIN_TOKEN 필요)"""
+    if not ADMIN_TOKEN or request.headers.get("X-Admin-Token") != ADMIN_TOKEN:
+        return jsonify({"error": "unauthorized"}), 403
     data = request.json or {}
     products = data.get("products", [])
     email    = data.get("email", "")
@@ -1169,7 +1213,7 @@ function checkEmail(n) {{
   var email = getEmail(n);
   var s = document.getElementById('emailStatus' + n);
   if (!email) {{ s.className = 'email-status'; s.textContent = ''; return; }}
-  if (!/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{
+  if (!/^[\\w.+-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{
     s.className = 'email-status err';
     s.textContent = '이메일 형식이 올바르지 않습니다';
     return;
@@ -1252,7 +1296,7 @@ function updateSelectedBar1() {{
 function submitAll() {{
   var email = getEmail(1);
   if (!selected1.length) {{ alert('품목을 1개 이상 선택해주세요.'); return; }}
-  if (!email || !/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
+  if (!email || !/^[\\w.+-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
   document.getElementById('submitBtn1').disabled = true;
   document.getElementById('loading1').style.display = 'block';
   fetch('/api/request', {{
@@ -1426,7 +1470,7 @@ function updateSelectedBar2() {{
 function submitSpecific() {{
   var email = getEmail(2);
   if (!selectedItems2.length) {{ alert('서류를 1개 이상 선택해주세요.'); return; }}
-  if (!email || !/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
+  if (!email || !/^[\\w.+-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
   var grouped = {{}};
   selectedItems2.forEach(function(item) {{
     if (!grouped[item.product]) grouped[item.product] = [];
@@ -1541,7 +1585,7 @@ function updateSelectedBar3() {{
 function submitBasic() {{
   var email = getEmail(3);
   if (!selectedBasic3.length) {{ alert('서류를 1개 이상 선택해주세요.'); return; }}
-  if (!email || !/^[\\w.-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
+  if (!email || !/^[\\w.+-]+@[\\w.-]+\\.[\\w]{{2,}}$/.test(email)) {{ alert('올바른 이메일 주소를 입력해주세요.'); return; }}
   document.getElementById('submitBtn3').disabled = true;
   document.getElementById('loading3').style.display = 'block';
   fetch('/api/request', {{
@@ -1582,7 +1626,7 @@ def api_check_email():
     """이메일 형식 + 도메인 실존(MX/A) 확인. 발송 전 사전 검증용."""
     data  = request.json or {}
     email = (data.get("email") or "").strip()
-    if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", email):
+    if not re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", email):
         return jsonify({"ok": True, "valid": False, "reason": "형식이 올바르지 않습니다"})
     valid, reason = verify_email_domain(email)
     return jsonify({"ok": True, "valid": valid, "reason": reason})
@@ -1590,11 +1634,14 @@ def api_check_email():
 
 @app.route("/api/request", methods=["POST"])
 def api_request():
+    if _rate_limited():
+        return jsonify({"ok": False, "error": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."}), 429
+
     data  = request.json or {}
     mode  = data.get("mode", "all")
     email = data.get("email", "").strip()
 
-    if not email or not re.match(r"^[\w\.-]+@[\w\.-]+\.\w{2,}$", email):
+    if not email or not re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", email):
         return jsonify({"ok": False, "error": "올바른 이메일 주소를 입력해주세요"}), 400
 
     valid, reason = verify_email_domain(email)
@@ -1618,19 +1665,25 @@ def api_request():
         return jsonify({"ok": True, "file_count": file_count})
 
     if mode == "specific":
-        selections = data.get("selections", [])
-        if not selections:
+        raw_selections = data.get("selections", [])
+        if not raw_selections:
             return jsonify({"ok": False, "error": "서류를 선택해주세요"}), 400
-        for sel in selections:
-            if not sel.get("product") or sel["product"] not in DOCUMENT_MAP:
-                return jsonify({"ok": False, "error": f'품목을 찾을 수 없습니다: {sel.get("product", "")}'}), 400
+        selections = []
         summary    = []
         file_count = 0
-        for sel in selections:
-            docs   = DOCUMENT_MAP[sel["product"]]
-            labels = [docs[i].get("type", "파일") for i in sel["doc_indices"] if i < len(docs)]
-            summary.append({"product": sel["product"], "labels": labels})
-            file_count += len(sel["doc_indices"])
+        for sel in raw_selections:
+            product = sel.get("product")
+            if not product or product not in DOCUMENT_MAP:
+                return jsonify({"ok": False, "error": f'품목을 찾을 수 없습니다: {product or ""}'}), 400
+            docs = DOCUMENT_MAP[product]
+            idxs = [i for i in sel.get("doc_indices", []) if isinstance(i, int) and 0 <= i < len(docs)]
+            if not idxs:
+                continue
+            selections.append({"product": product, "doc_indices": idxs})
+            summary.append({"product": product, "labels": [docs[i].get("type", "파일") for i in idxs]})
+            file_count += len(idxs)
+        if not selections:
+            return jsonify({"ok": False, "error": "유효한 서류가 없습니다"}), 400
         def process_specific():
             try:
                 url = create_specific_zip(selections)
