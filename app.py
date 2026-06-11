@@ -2140,7 +2140,7 @@ def status_page():
             info = '<span class="muted">발송 처리 중입니다… (자동으로 새로고침됩니다)</span>'
         elif link_ok:
             rem = max(0, int(24 - age)) if age is not None else 24
-            info = (f'<a class="open" href="{_esc(link)}" target="_blank">내용 직접 확인</a>'
+            info = (f'<a class="open" href="{_esc(link)}" target="_blank">파일 직접 다운로드</a>'
                     f'<span class="valid">· 다운로드 링크 유효 (약 {rem}시간 남음)</span>')
         elif status in ("success", "partial") and expired:
             info = '<span class="exp">다운로드 링크 만료됨 (발송 후 24시간 경과)</span>'
