@@ -1,0 +1,25 @@
+name: Cleanup ZIPs & Keep Supabase Alive
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # 6시간마다 (24h 지난 ZIP 삭제 + 일시정지 방지 핑)
+  workflow_dispatch:         # 수동 실행
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install requests
+
+      - name: Cleanup old ZIPs (and keep-alive)
+        run: python cleanup_supabase_zips.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_BUCKET: ssangkom-zips

@@ -35,6 +35,12 @@ GOOGLE_REFRESH_TOKEN = os.getenv("GOOGLE_REFRESH_TOKEN")
 COMPANY_NAME = os.getenv("COMPANY_NAME", "쌍곰")
 SERVER_BASE_URL = os.getenv("SERVER_BASE_URL", "http://localhost:5000")
 
+# Supabase Storage (다운로드 ZIP 보관 — 서버 재시작과 무관하게 24h 유지)
+SUPABASE_URL = (os.getenv("SUPABASE_URL") or "").rstrip("/")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "ssangkom-zips")
+LINK_TTL_SECONDS = 86400  # 24시간
+
 TEMP_DIR = os.path.join(os.getenv("TMPDIR", "/tmp"), "ssangkom_zips")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
@@ -224,14 +230,53 @@ def _cleanup(path: str, file_id: str):
     expiry_map.pop(file_id, None)
 
 
+def _upload_to_supabase(file_id: str, data: bytes) -> str | None:
+    """ZIP을 Supabase Storage에 올리고 24h 서명 URL 반환. 미설정/실패 시 None."""
+    if not (SUPABASE_URL and SUPABASE_SERVICE_KEY):
+        return None
+    path = f"{file_id}.zip"
+    auth = {"Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "apikey": SUPABASE_SERVICE_KEY}
+    try:
+        up = requests.post(
+            f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{path}",
+            headers={**auth, "Content-Type": "application/zip", "x-upsert": "true"},
+            data=data, timeout=60,
+        )
+        if up.status_code not in (200, 201):
+            print(f"[Supabase 업로드 실패 {up.status_code}] {up.text[:200]}")
+            return None
+        sign = requests.post(
+            f"{SUPABASE_URL}/storage/v1/object/sign/{SUPABASE_BUCKET}/{path}",
+            headers={**auth, "Content-Type": "application/json"},
+            json={"expiresIn": LINK_TTL_SECONDS}, timeout=15,
+        )
+        if sign.status_code != 200:
+            print(f"[Supabase 서명 실패 {sign.status_code}] {sign.text[:200]}")
+            return None
+        signed = sign.json().get("signedURL") or sign.json().get("signedUrl")
+        if not signed:
+            return None
+        return f"{SUPABASE_URL}/storage/v1{signed}"
+    except Exception as e:
+        print(f"[Supabase 오류] {e}")
+        return None
+
+
 def _save_zip_temp(zip_buffer: io.BytesIO) -> str:
-    """BytesIO ZIP을 임시 파일로 저장하고 다운로드 URL 반환"""
+    """ZIP 저장 후 다운로드 URL 반환. Supabase 우선, 실패 시 로컬 임시파일 폴백."""
     file_id = str(uuid.uuid4())
+    data = zip_buffer.getvalue()
+
+    url = _upload_to_supabase(file_id, data)
+    if url:
+        return url
+
+    # 폴백: 로컬 임시 파일 + /download (서버 재시작 시 만료될 수 있음)
     zip_path = os.path.join(TEMP_DIR, f"{file_id}.zip")
     with open(zip_path, "wb") as f:
-        f.write(zip_buffer.getvalue())
+        f.write(data)
     expiry_map[file_id] = datetime.now() + timedelta(hours=24)
-    timer = threading.Timer(86400, lambda: _cleanup(zip_path, file_id))
+    timer = threading.Timer(LINK_TTL_SECONDS, lambda: _cleanup(zip_path, file_id))
     timer.daemon = True
     timer.start()
     return f"{SERVER_BASE_URL}/download/{file_id}"
