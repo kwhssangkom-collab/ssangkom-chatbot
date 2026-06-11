@@ -571,7 +571,7 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
                   <td style="border-top:1px solid #ebebeb;padding-top:20px;">
                     <p style="color:#666;font-size:13px;line-height:2;margin:0;">
                       ※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>
-                      ※ 문의사항은 담당 영업사원 또는 대표번호로 연락 바랍니다.
+                      ※ 관련 문의사항은 담당 영업사원 또는 기술상담실(080-768-3030)로 연락 바랍니다.
                     </p>
                   </td>
                 </tr>
@@ -648,7 +648,7 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
         <tr><td style="padding:18px 36px 28px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td style="border-top:1px solid #ebebeb;padding-top:18px;">
-              <p style="color:#888;font-size:12px;line-height:2;margin:0;">※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>※ 기술자료 관련 문의사항은 기술연구소로 문의해 주시기 바랍니다.</p>
+              <p style="color:#888;font-size:12px;line-height:2;margin:0;">※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>※ 관련 문의사항은 담당 영업사원 또는 기술상담실(080-768-3030)로 연락 바랍니다.</p>
             </td></tr>
           </table>
         </td></tr>
@@ -1207,11 +1207,6 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
   <p>&#8226; 기술자료 관련 문의사항은 <strong>기술연구소</strong>로 문의해 주시기 바랍니다.<br>&#8226; 기술자료는 홈페이지에 업로드된 자료를 기반으로 발송됩니다.<br>&#8226; <strong>품목별 전체</strong> / <strong>서류 직접선택</strong> 발송 시 회사 <strong>기본서류 다운로드 버튼</strong>이 기본적으로 이메일에 함께 발송됩니다.</p>
 </div>
 
-<div class="section">
-  <div class="section-title">요청자 (선택)</div>
-  <input type="text" class="email-input" id="requester" placeholder="이름 또는 회사명 — 요청 기록용">
-</div>
-
 <!-- ── Tab 1: 품목별 전체 ── -->
 <div class="tab-content active" id="content1">
   <div id="main1">
@@ -1318,10 +1313,6 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 var ALL_PRODUCTS = {products_json};
 var BASIC_DOCS   = {basic_docs_json};
 var KAKAO_UID    = new URLSearchParams(location.search).get('u') || '';
-
-function getRequester() {{
-  return document.getElementById('requester').value.trim();
-}}
 
 function switchTab(n) {{
   for (var i = 1; i <= 3; i++) {{
@@ -1473,7 +1464,7 @@ function submitAll() {{
   document.getElementById('loading1').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'all', products: selected1, email: email, requester: getRequester(), kakao_user_id: KAKAO_UID}})
+    body: JSON.stringify({{mode: 'all', products: selected1, email: email, kakao_user_id: KAKAO_UID}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1655,7 +1646,7 @@ function submitSpecific() {{
   document.getElementById('loading2').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'specific', selections: selections, email: email, requester: getRequester(), kakao_user_id: KAKAO_UID}})
+    body: JSON.stringify({{mode: 'specific', selections: selections, email: email, kakao_user_id: KAKAO_UID}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
@@ -1762,7 +1753,7 @@ function submitBasic() {{
   document.getElementById('loading3').style.display = 'block';
   fetch('/api/request', {{
     method: 'POST', headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{mode: 'basic', doc_indices: selectedBasic3, email: email, requester: getRequester(), kakao_user_id: KAKAO_UID}})
+    body: JSON.stringify({{mode: 'basic', doc_indices: selectedBasic3, email: email, kakao_user_id: KAKAO_UID}})
   }})
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
