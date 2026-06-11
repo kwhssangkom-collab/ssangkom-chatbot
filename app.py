@@ -2099,6 +2099,7 @@ def status_page():
     """영업사원용: 수신 이메일로 발송 요청의 처리 현황 확인 + 재전송."""
     email = (request.args.get("email") or "").strip()
     resent = request.args.get("resent") == "1"
+    domain_opts = "".join(f'<option value="{d}">@{d}</option>' for d in COMMON_EMAIL_DOMAINS)
     rows = []
     searched = bool(email)
     if email and re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", email) and SUPABASE_URL and SUPABASE_KEY:
@@ -2166,9 +2167,9 @@ def status_page():
         )
     if searched and not rows:
         cards = ('<div class="empty">해당 이메일로 접수된 <b>발송 요청이 없습니다.</b><br>'
-                 '수신 이메일 주소가 정확한지 확인해 주세요.</div>')
+                 '수신 이메일이 정확한지 확인해 주세요.</div>')
 
-    intro = "" if searched else ('<div class="empty"><b>수신 이메일 주소</b>를 입력하면<br>'
+    intro = "" if searched else ('<div class="empty"><b>수신 이메일</b>을 입력하면<br>'
                                  '요청이 정상 처리됐는지(발송 완료 여부)와 재전송을 진행할 수 있습니다.</div>')
     banner = ""
     if resent:
@@ -2182,16 +2183,18 @@ def status_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{background:#003389;padding:20px;text-align:center}}
-.header img{{height:34px;filter:brightness(0) invert(1)}}
-.header div{{color:#fff;font-size:17px;font-weight:700;margin-top:8px}}
-.search{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
-.search label{{font-size:13px;font-weight:700;color:#003389;display:block;margin-bottom:8px}}
-.search form{{display:flex;gap:8px}}
-.search input{{flex:1;min-width:0;padding:12px 14px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;outline:none;font-family:inherit}}
-.search input:focus{{border-color:#003389}}
-.search button{{flex-shrink:0;padding:0 18px;background:#003389;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}}
-.search .hint{{font-size:12px;color:#999;margin-top:8px}}
+.header{{background:#003389;padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
+.header img{{height:36px;filter:brightness(0) invert(1)}}
+.header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
+.section{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
+.section-title{{font-size:13px;font-weight:700;color:#003389;letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase}}
+.email-line{{display:flex;gap:8px}}
+.email-input{{flex:1;min-width:0;padding:12px 14px;border:1.5px solid #dde3ef;border-radius:8px;font-size:15px;outline:none;font-family:inherit;transition:.2s}}
+.email-input:focus{{border-color:#003389}}
+.lookup-btn{{flex-shrink:0;padding:0 18px;background:#003389;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}}
+.email-select{{width:100%;margin-top:8px;padding:11px 12px;border:1.5px solid #dde3ef;border-radius:8px;font-size:14px;font-family:inherit;background:#fff;color:#444;outline:none;cursor:pointer}}
+.email-select:focus{{border-color:#003389}}
+.hint{{font-size:12px;color:#999;margin-top:8px}}
 .banner{{background:#e6f4ea;color:#1a7f37;margin:0 12px 4px;border-radius:10px;padding:11px 14px;font-size:13px;font-weight:600}}
 .list{{padding:4px 12px 24px}}
 .card{{background:#fff;border-radius:12px;padding:15px 16px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.06)}}
@@ -2215,19 +2218,32 @@ body{{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f
 </style></head><body>
 <div class="header">
   <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM">
-  <div>기술자료 발송 처리 현황</div>
+  <span>기술자료 발송 처리 현황</span>
 </div>
-<div class="search">
-  <label>수신 이메일 주소</label>
+<div class="section">
+  <div class="section-title">수신 이메일</div>
   <form method="get" action="/status">
-    <input type="email" name="email" value="{_esc(email)}" placeholder="발송 요청한 이메일" autocomplete="off">
-    <button type="submit">조회</button>
+    <div class="email-line">
+      <input type="email" class="email-input" id="semail" name="email" value="{_esc(email)}" placeholder="발송 요청한 이메일" autocomplete="off">
+      <button type="submit" class="lookup-btn">조회</button>
+    </div>
+    <select class="email-select" id="sdomain" onchange="pickSDomain()"><option value="">도메인 빠른선택</option>{domain_opts}</select>
   </form>
-  <div class="hint">기술자료를 발송 요청하신 수신 이메일 주소를 입력하세요.</div>
+  <div class="hint">기술자료를 발송 요청하신 수신 이메일을 입력하세요.</div>
 </div>
 {banner}
 <div class="list">{intro}{cards}</div>
 <div class="note">※ 다운로드 링크는 발송 후 24시간 동안 유효합니다. 만료 시 ‘재전송’으로 다시 보낼 수 있습니다.</div>
+<script>
+function pickSDomain() {{
+  var sel = document.getElementById('sdomain'), inp = document.getElementById('semail');
+  if (!sel.value) return;
+  var v = inp.value.trim(), local = v.indexOf('@') !== -1 ? v.split('@')[0] : v;
+  inp.value = local + '@' + sel.value;
+  sel.selectedIndex = 0;
+  inp.focus();
+}}
+</script>
 </body></html>"""
     return Response(html, mimetype="text/html; charset=utf-8")
 
