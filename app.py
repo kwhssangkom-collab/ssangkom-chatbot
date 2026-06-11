@@ -803,147 +803,48 @@ def guide_response() -> dict:
     }
 
 
+def menu_redirect_response() -> dict:
+    """채팅 입력 시 버튼/요청 페이지로 유도."""
+    return {
+        "version": "2.0",
+        "template": {
+            "outputs": [
+                {"simpleText": {"text":
+                    "이 채널은 아래 버튼으로 이용해 주세요. 🙂\n\n"
+                    "‘기술자료 요청하기’ 버튼을 누르시면 기술자료를 이메일로 받으실 수 있습니다.\n"
+                    "사용 방법이 궁금하시면 하단 메뉴의 ‘이용안내’를 눌러주세요."}},
+                {"basicCard": {
+                    "title": "기술자료 요청",
+                    "description": "버튼을 눌러 요청 페이지로 이동하세요.",
+                    "buttons": [
+                        {"action": "webLink", "label": "기술자료 요청하기",
+                         "webLinkUrl": f"{SERVER_BASE_URL}/request"}
+                    ]
+                }}
+            ]
+        }
+    }
+
+
 # ═══════════════════════════════════════════════════
 # 웹훅 메인 핸들러
 # ═══════════════════════════════════════════════════
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
+    """버튼/웹폼 전용 채널. 채팅 입력은 이용안내/메뉴로 유도."""
     data = request.json or {}
     try:
-        user_id = data["userRequest"]["user"]["id"]
         utterance = data["userRequest"]["utterance"].strip()
     except (KeyError, TypeError, AttributeError):
-        return jsonify(text_response("요청을 처리할 수 없습니다. 다시 시도해주세요."))
+        return jsonify(menu_redirect_response())
 
-    session = sessions.get(user_id, {"step": "search"})
-
-    # ── 이용안내 ───────────────────────────────────
+    # 이용안내
     if utterance in ["이용안내", "이용 안내", "사용방법", "사용 방법", "사용법", "도움말", "안내"]:
-        sessions.pop(user_id, None)
         return jsonify(guide_response())
 
-    # ── 취소 명령 ──────────────────────────────────
-    if utterance in ["취소", "처음", "다시", "초기화"]:
-        sessions.pop(user_id, None)
-        return jsonify(quick_reply_response(
-            "처음으로 돌아왔습니다.\n원하시는 품목명을 입력해주세요.",
-            ["전체 품목 보기"]
-        ))
-
-    # ── 전체 품목 보기 ─────────────────────────────
-    if utterance == "전체 품목 보기":
-        names = PRODUCT_NAMES[:20]
-        text = "품목 목록 (상위 20개)입니다.\n원하시는 품목명을 직접 입력해주세요:\n\n"
-        text += "\n".join(f"• {n}" for n in names)
-        if len(PRODUCT_NAMES) > 20:
-            text += f"\n\n... 외 {len(PRODUCT_NAMES) - 20}개"
-        sessions.pop(user_id, None)
-        return jsonify(text_response(text))
-
-    # ── Step 1: 품목 검색 ──────────────────────────
-    if session["step"] == "search":
-        results = search_products(utterance)
-
-        if not results:
-            return jsonify(quick_reply_response(
-                f"'{utterance}'에 해당하는 품목을 찾지 못했습니다.\n품목명을 다시 입력해주세요.",
-                ["전체 품목 보기"]
-            ))
-
-        if len(results) == 1:
-            # 정확히 하나만 매칭 → 바로 이메일 입력 단계
-            product = results[0]
-            file_count = len(DOCUMENT_MAP.get(product, []))
-            sessions[user_id] = {"step": "email", "products": [product]}
-            return jsonify(text_response(
-                f"✅ '{product}' 승인서류\n총 {file_count}개 파일\n\n"
-                f"발송받으실 이메일 주소를 입력해주세요."
-            ))
-
-        # 여러 품목 매칭 → 선택 요청
-        sessions[user_id] = {"step": "select", "candidates": results}
-        return jsonify(list_card_response(
-            "품목 선택",
-            results,
-            f"'{utterance}' 검색 결과입니다.\n해당하는 품목을 선택해주세요:"
-        ))
-
-    # ── Step 2: 품목 선택 (여러 결과 중 선택) ────────
-    if session["step"] == "select":
-        candidates = session.get("candidates", [])
-        selected = None
-
-        for name in candidates:
-            if utterance == name or utterance in name:
-                selected = name
-                break
-
-        if not selected:
-            # 재검색
-            results = search_products(utterance)
-            if results:
-                sessions[user_id] = {"step": "select", "candidates": results}
-                return jsonify(list_card_response(
-                    "품목 선택",
-                    results,
-                    f"해당하는 품목을 선택해주세요:"
-                ))
-            sessions.pop(user_id, None)
-            return jsonify(quick_reply_response(
-                "품목을 찾지 못했습니다. 다시 검색해주세요.",
-                ["전체 품목 보기"]
-            ))
-
-        file_count = len(DOCUMENT_MAP.get(selected, []))
-        sessions[user_id] = {"step": "email", "products": [selected]}
-        return jsonify(text_response(
-            f"✅ '{selected}' 승인서류\n총 {file_count}개 파일\n\n"
-            f"발송받으실 이메일 주소를 입력해주세요."
-        ))
-
-    # ── Step 3: 이메일 입력 → ZIP 생성 → 발송 ────────
-    if session["step"] == "email":
-        email = utterance
-
-        # 이메일 형식 검증
-        if not re.match(r"^[\w.+-]+@[\w.-]+\.\w{2,}$", email):
-            return jsonify(text_response(
-                "올바른 이메일 주소 형식이 아닙니다.\n예: example@company.com\n\n이메일 주소를 다시 입력해주세요."
-            ))
-
-        products = session.get("products", [])
-        sessions.pop(user_id, None)
-
-        # ZIP 생성 및 이메일 발송 (백그라운드)
-        def process():
-            try:
-                download_url, _ = create_zip(products)
-                send_email(email, products, download_url)
-                print(f"[완료] {email} -> {products}")
-            except Exception as e:
-                print(f"[오류] {e}")
-
-        thread = threading.Thread(target=process, daemon=True)
-        thread.start()
-
-        file_count = sum(len(DOCUMENT_MAP.get(p, [])) for p in products)
-        product_names = ", ".join(products)
-        return jsonify(text_response(
-            f"✅ 승인서류 발송을 시작했습니다!\n\n"
-            f"📦 품목: {product_names}\n"
-            f"📄 파일: 총 {file_count}개\n"
-            f"📧 수신: {email}\n\n"
-            f"잠시 후 이메일을 확인해주세요.\n(처리 시간: 약 30초~1분)\n\n"
-            f"다른 품목 서류가 필요하시면 품목명을 입력해주세요."
-        ))
-
-    # 예외 처리
-    sessions.pop(user_id, None)
-    return jsonify(quick_reply_response(
-        "안녕하세요! 품목별 승인서류 자동 발송 서비스입니다.\n원하시는 품목명을 입력해주세요.",
-        ["전체 품목 보기"]
-    ))
+    # 그 외 모든 채팅 입력 → 버튼/요청 페이지로 유도
+    return jsonify(menu_redirect_response())
 
 
 # ═══════════════════════════════════════════════════
