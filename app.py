@@ -12,7 +12,7 @@ import threading
 import urllib.parse
 import uuid
 import zipfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -978,6 +978,18 @@ def _esc(v) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
+_KST = timezone(timedelta(hours=9))
+
+
+def _fmt_kst(ts: str) -> str:
+    """UTC ISO 타임스탬프를 한국시간 'MM-DD HH:MM'으로 변환."""
+    try:
+        dt = datetime.fromisoformat((ts or "").replace("Z", "+00:00")).astimezone(_KST)
+        return dt.strftime("%m-%d %H:%M")
+    except Exception:
+        return (ts or "")[:16].replace("T", " ")
+
+
 @app.route("/admin/logs")
 def admin_logs():
     """발송 요청 기록 조회 (ADMIN_TOKEN 필요). 예: /admin/logs?token=XXXX"""
@@ -985,11 +997,13 @@ def admin_logs():
     if not ADMIN_TOKEN or token != ADMIN_TOKEN:
         return "unauthorized", 403
 
+    q = (request.args.get("q") or "").strip()
     rows = []
     if SUPABASE_URL and SUPABASE_KEY:
         try:
+            filt = f"&email=ilike.*{urllib.parse.quote(q)}*" if q else ""
             r = requests.get(
-                f"{SUPABASE_URL}/rest/v1/send_logs?select=*&order=created_at.desc&limit=300",
+                f"{SUPABASE_URL}/rest/v1/send_logs?select=*{filt}&order=created_at.desc&limit=300",
                 headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
                 timeout=10,
             )
@@ -1009,29 +1023,34 @@ def admin_logs():
         t = {"success": "성공", "partial": "부분", "failed": "실패"}.get(s, _esc(s) or "-")
         return f'<span style="background:{c};color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700">{t}</span>'
 
+    mode_kr = {"all": "품목별 전체", "specific": "직접선택", "basic": "기본서류"}
     trs = ""
     for x in rows:
-        ts   = _esc(x.get("created_at", ""))[:19].replace("T", " ")
+        ts   = _fmt_kst(x.get("created_at", ""))
         cnt  = f'{x.get("files_actual", "?")}/{x.get("files_requested", "?")}'
         warn = ' style="color:#dc2f3a;font-weight:700"' if (x.get("status") in ("partial", "failed")) else ""
         link = x.get("download_url") or ""
         link_html = f'<a href="{_esc(link)}" target="_blank">열기</a>' if link.startswith("http") else "-"
+        req = x.get("requester") or ""
+        if req == "재전송":
+            req_html = '<span class="retag">🔄 재전송</span>'
+        else:
+            req_html = _esc(req) or "<span class='dim'>직접요청</span>"
         trs += (
             "<tr>"
             f"<td class='nowrap'>{ts}</td>"
             f"<td>{badge(x.get('status'))}</td>"
-            f"<td>{_esc(x.get('requester'))}</td>"
+            f"<td class='nowrap'>{req_html}</td>"
             f"<td class='nowrap'>{_esc(x.get('email'))}</td>"
-            f"<td>{_esc(x.get('mode'))}</td>"
+            f"<td class='nowrap'>{mode_kr.get(x.get('mode'), _esc(x.get('mode')))}</td>"
             f"<td class='sum'>{_esc(x.get('summary'))}</td>"
             f"<td{warn}>{cnt}</td>"
             f"<td>{link_html}</td>"
-            f"<td class='nowrap'>{_esc(x.get('client_ip'))}</td>"
             f"<td class='err'>{_esc(x.get('error'))}</td>"
             "</tr>"
         )
     if not rows:
-        trs = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999">기록이 없습니다</td></tr>'
+        trs = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999">기록이 없습니다</td></tr>'
 
     html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1049,8 +1068,13 @@ tr:hover td{{background:#f9fbff}}
 .nowrap{{white-space:nowrap}}
 .sum{{max-width:320px;font-size:12px;color:#444;word-break:break-all}}
 .err{{max-width:200px;font-size:11px;color:#dc2f3a;word-break:break-all}}
+.retag{{background:#eef2fb;color:#003389;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap}}
+.dim{{color:#bbb}}
 a{{color:#003389}}
-.refresh{{margin-left:auto;color:#fff;font-size:13px;text-decoration:none;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:8px}}
+.refresh{{color:#fff;font-size:13px;text-decoration:none;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:8px}}
+.srch{{margin-left:auto;display:flex;gap:6px}}
+.srch input{{padding:6px 10px;border:none;border-radius:8px;font-size:13px;font-family:inherit;outline:none;width:170px}}
+.srch button{{padding:6px 12px;border:none;border-radius:8px;background:#fff;color:#003389;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}}
 </style></head><body>
 <div class="top">
   <h1>📋 기술자료 발송 기록</h1>
@@ -1058,12 +1082,17 @@ a{{color:#003389}}
   <span class="stat">성공 {n_ok}</span>
   <span class="stat">부분 {n_part}</span>
   <span class="stat">실패 {n_fail}</span>
-  <a class="refresh" href="/admin/logs?token={_esc(token)}">새로고침</a>
+  <form class="srch" method="get" action="/admin/logs">
+    <input type="hidden" name="token" value="{_esc(token)}">
+    <input type="text" name="q" value="{_esc(q)}" placeholder="이메일 검색">
+    <button type="submit">검색</button>
+    <a class="refresh" href="/admin/logs?token={_esc(token)}">전체</a>
+  </form>
 </div>
 <div class="wrap">
 <table>
 <thead><tr>
-<th>시각(UTC)</th><th>상태</th><th>요청자</th><th>이메일</th><th>모드</th><th>내용</th><th>파일(실/요청)</th><th>링크</th><th>IP</th><th>오류</th>
+<th>시각(KST)</th><th>상태</th><th>요청구분</th><th>이메일</th><th>모드</th><th>내용</th><th>파일(실/요청)</th><th>링크</th><th>오류</th>
 </tr></thead>
 <tbody>{trs}</tbody>
 </table>
@@ -2128,7 +2157,7 @@ def status_page():
     cards = ""
     for x in rows:
         status = x.get("status")
-        ts   = _esc(x.get("created_at", ""))[:16].replace("T", " ")
+        ts   = _fmt_kst(x.get("created_at", ""))
         cnt  = f'{x.get("files_actual", 0)}/{x.get("files_requested", 0)}'
         link = x.get("download_url") or ""
         age  = _age_hours(x.get("created_at", "") or "")
