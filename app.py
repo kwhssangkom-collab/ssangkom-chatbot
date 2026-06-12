@@ -1156,10 +1156,18 @@ body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
 .submit-btn:disabled{{background:#aaa;cursor:not-allowed}}
 .hint{{font-size:12px;color:#999;margin-top:6px;text-align:center}}
 .loading{{display:none;text-align:center;padding:16px;color:#003389;font-size:14px}}
-.success{{display:none;text-align:center;padding:40px 20px}}
-.success .icon{{font-size:56px;margin-bottom:16px}}
-.success h2{{color:#003389;font-size:20px;margin-bottom:8px}}
-.success p{{color:#666;font-size:14px;line-height:1.7}}
+.success{{display:none;padding:18px 12px 40px}}
+.success-card{{background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(16,38,76,.12);padding:38px 26px 30px;text-align:center;max-width:460px;margin:8px auto 0}}
+.success-check{{width:72px;height:72px;border-radius:50%;margin:0 auto 18px;background:linear-gradient(135deg,#16a34a,#22c55e);box-shadow:0 10px 22px rgba(22,163,74,.32);display:flex;align-items:center;justify-content:center}}
+.success-check svg{{width:36px;height:36px}}
+.success h2{{color:#0a2a66;font-size:20px;font-weight:800;letter-spacing:-.3px;margin:0 0 20px}}
+.recap{{background:#f4f7fd;border:1px solid #e7edf8;border-radius:12px;padding:6px 16px;margin:0 0 18px;text-align:left}}
+.recap-row{{display:flex;gap:12px;padding:9px 0;font-size:13.5px;line-height:1.55}}
+.recap-row + .recap-row{{border-top:1px solid #e9eef7}}
+.recap-k{{flex-shrink:0;width:62px;color:#7b86a0;font-weight:600}}
+.recap-v{{flex:1;color:#1a2b4a;font-weight:600;word-break:break-all}}
+.success-hint{{color:#8a93a3;font-size:12.5px;line-height:1.75;margin:0 0 22px}}
+.success-btn{{display:inline-block;background:#003389;background-image:linear-gradient(135deg,#003389,#1456c8);color:#fff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 36px;border-radius:10px;box-shadow:0 6px 16px rgba(0,40,120,.26)}}
 .doc-section-product{{font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:10px;line-height:1.4;padding:8px 12px;background:#f4f7fd;border-radius:6px}}
 .row-between{{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}}
 .select-all-btn{{background:none;border:1.5px solid #003389;color:#003389;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}}
@@ -1225,7 +1233,13 @@ body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
     </div>
   </div>
   <div class="success" id="success1">
-    <div class="icon">✅</div><h2>발송 요청 완료!</h2><p id="successMsg1"></p>
+    <div class="success-card">
+      <div class="success-check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+      <h2>발송 요청이 완료되었습니다</h2>
+      <div class="recap" id="successMsg1"></div>
+      <p class="success-hint">잠시 후(약 30초~1분) 받은편지함을 확인해 주세요.<br>메일이 보이지 않으면 스팸함도 확인해 주세요.</p>
+      <a class="success-btn" href="/request">새 요청하기</a>
+    </div>
   </div>
 </div>
 
@@ -1263,7 +1277,13 @@ body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
     </div>
   </div>
   <div class="success" id="success2">
-    <div class="icon">✅</div><h2>발송 요청 완료!</h2><p id="successMsg2"></p>
+    <div class="success-card">
+      <div class="success-check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+      <h2>발송 요청이 완료되었습니다</h2>
+      <div class="recap" id="successMsg2"></div>
+      <p class="success-hint">잠시 후(약 30초~1분) 받은편지함을 확인해 주세요.<br>메일이 보이지 않으면 스팸함도 확인해 주세요.</p>
+      <a class="success-btn" href="/request">새 요청하기</a>
+    </div>
   </div>
 </div>
 
@@ -1294,7 +1314,13 @@ body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
     </div>
   </div>
   <div class="success" id="success3">
-    <div class="icon">✅</div><h2>발송 요청 완료!</h2><p id="successMsg3"></p>
+    <div class="success-card">
+      <div class="success-check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+      <h2>발송 요청이 완료되었습니다</h2>
+      <div class="recap" id="successMsg3"></div>
+      <p class="success-hint">잠시 후(약 30초~1분) 받은편지함을 확인해 주세요.<br>메일이 보이지 않으면 스팸함도 확인해 주세요.</p>
+      <a class="success-btn" href="/request">새 요청하기</a>
+    </div>
   </div>
 </div>
 
@@ -1308,6 +1334,14 @@ function switchTab(n) {{
     document.getElementById('tab' + i).className = 'tab' + (i === n ? ' active' : '');
     document.getElementById('content' + i).className = 'tab-content' + (i === n ? ' active' : '');
   }}
+}}
+
+function showSuccess(n) {{
+  document.getElementById('main' + n).style.display = 'none';
+  document.getElementById('success' + n).style.display = 'block';
+  var t = document.querySelector('.tabs');  if (t)  t.style.display = 'none';
+  var nt = document.querySelector('.notice'); if (nt) nt.style.display = 'none';
+  window.scrollTo(0, 0);
 }}
 
 // ── 공통: 선택 칩 렌더 ─────────────────────────
@@ -1503,10 +1537,11 @@ function submitAll() {{
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
     if (d.ok) {{
-      document.getElementById('main1').style.display = 'none';
-      document.getElementById('success1').style.display = 'block';
       document.getElementById('successMsg1').innerHTML =
-        '<b>' + selected1.join(', ') + '</b><br>총 ' + d.file_count + '개 파일<br><br>📧 ' + emails.join('<br>') + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
+        '<div class="recap-row"><span class="recap-k">요청 품목</span><span class="recap-v">' + selected1.join(', ') + '</span></div>' +
+        '<div class="recap-row"><span class="recap-k">파일</span><span class="recap-v">총 ' + d.file_count + '개</span></div>' +
+        '<div class="recap-row"><span class="recap-k">수신</span><span class="recap-v">' + emails.join('<br>') + '</span></div>';
+      showSuccess(1);
     }} else {{
       alert('오류: ' + (d.error || ''));
       document.getElementById('submitBtn1').disabled = false;
@@ -1684,10 +1719,10 @@ function submitSpecific() {{
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
     if (d.ok) {{
-      document.getElementById('main2').style.display = 'none';
-      document.getElementById('success2').style.display = 'block';
       document.getElementById('successMsg2').innerHTML =
-        '선택 서류 ' + d.file_count + '개<br><br>📧 ' + emails.join('<br>') + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
+        '<div class="recap-row"><span class="recap-k">선택 서류</span><span class="recap-v">총 ' + d.file_count + '개</span></div>' +
+        '<div class="recap-row"><span class="recap-k">수신</span><span class="recap-v">' + emails.join('<br>') + '</span></div>';
+      showSuccess(2);
     }} else {{
       alert('오류: ' + (d.error || ''));
       document.getElementById('submitBtn2').disabled = false;
@@ -1790,10 +1825,10 @@ function submitBasic() {{
   .then(function(r) {{ return r.json(); }})
   .then(function(d) {{
     if (d.ok) {{
-      document.getElementById('main3').style.display = 'none';
-      document.getElementById('success3').style.display = 'block';
       document.getElementById('successMsg3').innerHTML =
-        '기본서류 ' + d.file_count + '개<br><br>📧 ' + emails.join('<br>') + '<br>으로 발송되었습니다.<br><br>잠시 후 이메일을 확인해주세요.';
+        '<div class="recap-row"><span class="recap-k">기본서류</span><span class="recap-v">총 ' + d.file_count + '개</span></div>' +
+        '<div class="recap-row"><span class="recap-k">수신</span><span class="recap-v">' + emails.join('<br>') + '</span></div>';
+      showSuccess(3);
     }} else {{
       alert('오류: ' + (d.error || ''));
       document.getElementById('submitBtn3').disabled = false;
