@@ -417,28 +417,16 @@ def build_company_docs_html(server_base_url: str) -> str:
     """회사 기본서류 단일 ZIP 다운로드 버튼 HTML"""
     company_docs_zip_url = f"{server_base_url}/download-company-docs"
     return f"""
-    <!-- 구분선 -->
+    <tr><td style="padding:18px 36px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #eef1f6;font-size:0;line-height:0;">&nbsp;</td></tr></table>
+    </td></tr>
     <tr>
-      <td style="padding:24px 36px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="border-top:1px solid #e8ebf0;font-size:0;">&nbsp;</td></tr>
-        </table>
-      </td>
-    </tr>
-    <!-- 회사 기본 서류 -->
-    <tr>
-      <td style="padding:22px 36px 0;text-align:center;">
+      <td style="padding:18px 36px 0;text-align:center;">
         <a href="{company_docs_zip_url}"
-           style="display:inline-block;background:#ffffff;color:#003389;
-                  text-decoration:none;font-size:15px;font-weight:700;
-                  padding:14px 36px;border-radius:8px;
-                  border:1.5px solid #003389;letter-spacing:0.1px;">
-          &#9660;&nbsp; 기본서류 다운로드
+           style="display:inline-block;background:#ffffff;color:#003389;text-decoration:none;font-size:14px;font-weight:700;padding:13px 34px;border-radius:9px;border:1.5px solid #cdd8ee;">
+          &#9660;&nbsp; 회사 기본서류 다운로드
         </a>
-        <p style="font-size:13px;color:#666;margin:12px 0 0;line-height:1.7;">
-          국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외<br>
-          <span style="color:#888;">홈페이지 최신본 자동 제공</span>
-        </p>
+        <p style="font-size:12px;color:#9aa3b2;margin:10px 0 0;line-height:1.65;">국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외 &middot; 홈페이지 최신본 자동 제공</p>
       </td>
     </tr>"""
 
@@ -474,136 +462,21 @@ def _send_via_gmail_api(to_email: str, raw_msg_bytes: bytes):
 
 
 def send_email(to_email: str, product_names: list[str], download_url: str):
-    product_list_html = "".join(
-        f"""<tr><td style="padding:5px 0;color:#1a1a1a;font-size:16px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {name}</td></tr>"""
+    """품목별 전체 발송 메일 (공용 _email_shell 사용)."""
+    rows = "".join(
+        f'<tr><td style="padding:5px 0;color:#1a1a1a;font-size:15px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {name}</td></tr>'
         for name in product_names
     )
-
-    company_docs_html = build_company_docs_html(SERVER_BASE_URL)
-
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-</head>
-<body style="margin:0;padding:0;background:#eef1f6;font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;">
-
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:32px 0 48px;">
-    <tr>
-      <td align="center">
-
-        <table width="680" cellpadding="0" cellspacing="0"
-               style="background:#ffffff;border-radius:16px;overflow:hidden;
-                      box-shadow:0 4px 24px rgba(0,0,0,0.09);">
-
-          <!-- 로고 -->
-          <tr>
-            <td style="padding:28px 36px 24px;background:#ffffff;">
-              <img src="https://ssangkom.co.kr/img/hd_logo_on.png"
-                   alt="쌍곰" width="192" height="auto" style="display:block;">
-            </td>
-          </tr>
-
-          <!-- 헤더 -->
-          <tr>
-            <td bgcolor="#001a4d" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:24px 36px 26px;">
-              <p style="color:#ffffff;font-size:24px;font-weight:700;
-                         margin:0;line-height:1.4;letter-spacing:-0.3px;">
-                기술자료 이메일 송부
-              </p>
-            </td>
-          </tr>
-
-          <!-- 인사말 -->
-          <tr>
-            <td style="padding:28px 36px 0;">
-              <p style="color:#333;font-size:16px;line-height:1.95;margin:0;">
-                안녕하세요.<br>
-                요청하신 품목별 기술자료의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>
-                아래 버튼을 클릭하시면 파일을 즉시 다운로드하실 수 있습니다.
-              </p>
-            </td>
-          </tr>
-
-          <!-- 품목 카드 -->
-          <tr>
-            <td style="padding:20px 36px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0"
-                     style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
-                <tr>
-                  <td style="padding:18px 22px 20px;">
-                    <p style="font-size:12px;color:#003389;font-weight:700;
-                               letter-spacing:1.8px;margin:0 0 12px;text-transform:uppercase;">
-                      포함된 품목
-                    </p>
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      {product_list_html}
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- 메인 CTA -->
-          <tr>
-            <td style="padding:24px 36px 8px;text-align:center;">
-              <a href="{download_url}"
-                 style="display:inline-block;background:#003389;background-image:linear-gradient(135deg,#003389 0%,#1456c8 100%);color:#ffffff;
-                        text-decoration:none;font-size:17px;font-weight:700;
-                        padding:17px 52px;border-radius:8px;letter-spacing:0.1px;
-                        box-shadow:0 6px 16px rgba(0,40,120,0.32);">
-                &#9660;&nbsp; 기술자료 다운로드
-              </a>
-              <p style="margin:12px 0 0;font-size:13px;color:#666;text-align:center;">
-                ※ 링크 유효기간: 발송 후 24시간
-              </p>
-            </td>
-          </tr>
-
-          {company_docs_html}
-
-          <!-- 안내 문구 -->
-          <tr>
-            <td style="padding:20px 36px 28px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="border-top:1px solid #ebebeb;padding-top:20px;">
-                    <p style="color:#666;font-size:13px;line-height:2;margin:0;">
-                      ※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>
-                      ※ 관련 문의사항은 담당 영업사원 또는 기술상담실(080-768-3030)로 연락 바랍니다.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-        </table>
-
-      </td>
-    </tr>
-  </table>
-
-</body>
-</html>"""
-
-    msg = MIMEMultipart("alternative")
-    msg["From"] = f"{COMPANY_NAME} <{GMAIL_USER}>"
-    msg["To"] = to_email
-    msg["Subject"] = f"[{COMPANY_NAME}] 기술자료 이메일 송부"
-    msg.attach(MIMEText(html, "html", "utf-8"))
-
-    if GOOGLE_REFRESH_TOKEN:
-        _send_via_gmail_api(to_email, msg.as_bytes())
-    else:
-        # 로컬 개발용 SMTP fallback
-        import smtplib, socket, ssl
-        ipv4 = socket.getaddrinfo("smtp.gmail.com", 465, socket.AF_INET)[0][4][0]
-        with smtplib.SMTP_SSL(ipv4, 465, timeout=15, context=ssl.create_default_context()) as s:
-            s.login(GMAIL_USER, GMAIL_PASSWORD)
-            s.sendmail(GMAIL_USER, to_email, msg.as_string())
+    body = (
+        '<tr><td style="padding:16px 36px 0;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">'
+        '<tr><td style="padding:16px 20px 18px;">'
+        '<p style="font-size:11px;color:#003389;font-weight:700;letter-spacing:1.8px;margin:0 0 10px;text-transform:uppercase;">포함된 품목</p>'
+        f'<table width="100%" cellpadding="0" cellspacing="0">{rows}</table>'
+        '</td></tr></table></td></tr>'
+    )
+    html = _email_shell("기술자료 이메일 송부", body, download_url, "기술자료 다운로드", include_basic_btn=True)
+    _send_mail(to_email, f"[{COMPANY_NAME}] 기술자료 이메일 송부", html)
 
 
 def _send_mail(to_email: str, subject: str, html: str):
@@ -628,30 +501,34 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#eef1f6;font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:32px 0 48px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:30px 0 46px;">
     <tr><td align="center">
-      <table width="680" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.09);">
-        <tr><td style="padding:28px 36px 24px;">
-          <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM" width="160" height="auto" style="display:block;">
+      <table width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 26px rgba(16,38,76,.10);">
+        <!-- 로고 -->
+        <tr><td style="padding:26px 36px 18px;">
+          <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM" width="148" height="auto" style="display:block;">
         </td></tr>
-        <tr><td bgcolor="#001a4d" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:22px 36px 24px;">
-          <p style="color:#fff;font-size:22px;font-weight:700;margin:0;line-height:1.4;letter-spacing:-.3px;">{header_title}</p>
+        <!-- 헤더 -->
+        <tr><td bgcolor="#001a4d" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:22px 36px;">
+          <p style="color:#fff;font-size:21px;font-weight:700;margin:0;line-height:1.35;letter-spacing:-.3px;">{header_title}</p>
         </td></tr>
-        <tr><td style="padding:24px 36px 0;">
-          <p style="color:#333;font-size:15px;line-height:1.95;margin:0;">안녕하세요.<br>요청하신 기술자료의 다운로드 링크를 아래와 같이 송부해 드립니다.<br>아래 버튼을 클릭하시면 파일을 즉시 다운로드하실 수 있습니다.</p>
+        <!-- 인사말 -->
+        <tr><td style="padding:26px 36px 2px;">
+          <p style="color:#333;font-size:15px;line-height:1.85;margin:0;">안녕하세요.<br>요청하신 기술자료의 다운로드 링크를 아래와 같이 보내드립니다.</p>
         </td></tr>
         {body_inner}
-        <tr><td style="padding:22px 36px 8px;text-align:center;">
-          <a href="{download_url}" style="display:inline-block;background:#003389;background-image:linear-gradient(135deg,#003389 0%,#1456c8 100%);color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 48px;border-radius:8px;box-shadow:0 6px 16px rgba(0,40,120,.32);">&#9660;&nbsp; {btn_label}</a>
-          <p style="margin:10px 0 0;font-size:12px;color:#888;text-align:center;">※ 링크 유효기간: 발송 후 24시간</p>
+        <!-- 메인 다운로드 버튼 -->
+        <tr><td style="padding:26px 36px 4px;text-align:center;">
+          <a href="{download_url}" style="display:inline-block;background:#003389;background-image:linear-gradient(135deg,#003389 0%,#1456c8 100%);color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 50px;border-radius:10px;box-shadow:0 6px 16px rgba(0,40,120,.30);">&#9660;&nbsp; {btn_label}</a>
+          <p style="margin:11px 0 0;font-size:12px;color:#9aa3b2;">링크 유효기간 : 발송 후 24시간</p>
         </td></tr>
         {basic_btn_html}
-        <tr><td style="padding:18px 36px 28px;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="border-top:1px solid #ebebeb;padding-top:18px;">
-              <p style="color:#888;font-size:12px;line-height:2;margin:0;">※ 본 메일은 자동 발송 메일로 회신되지 않습니다.<br>※ 관련 문의사항은 담당 영업사원 또는 기술상담실(080-768-3030)로 연락 바랍니다.</p>
-            </td></tr>
-          </table>
+        <!-- 푸터 -->
+        <tr><td style="padding:22px 36px 28px;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #edf0f5;padding-top:18px;">
+            <p style="color:#8a93a3;font-size:12px;line-height:1.95;margin:0;">본 메일은 발신 전용으로 회신되지 않습니다.<br>기술자료 관련 문의는 담당 영업사원 또는 기술상담실 <b style="color:#5a6473;">080-768-3030</b>으로 연락 바랍니다.</p>
+            <p style="margin:12px 0 0;font-size:11px;color:#b3bac6;letter-spacing:.3px;">SSANGKOM&nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://ssangkom.co.kr" style="color:#7b8493;text-decoration:none;">ssangkom.co.kr</a></p>
+          </td></tr></table>
         </td></tr>
       </table>
     </td></tr>
