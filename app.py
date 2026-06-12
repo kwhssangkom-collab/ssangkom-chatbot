@@ -327,14 +327,15 @@ def _upload_to_supabase(file_id: str, zip_path: str) -> str | None:
 
 
 def _finalize_zip(file_id: str, zip_path: str) -> str:
-    """디스크 ZIP을 업로드(Supabase 우선)하고 URL 반환. 실패 시 로컬 폴백 유지."""
+    """디스크 ZIP을 업로드(Supabase 우선)하고 다운로드 URL 반환. 실패 시 로컬 폴백 유지."""
     url = _upload_to_supabase(file_id, zip_path)
     if url:
         try:
             os.remove(zip_path)        # 업로드 성공 시 로컬본 제거
         except OSError:
             pass
-        return url
+        # raw 스토리지 주소 대신 우리 도메인 경유(/d/...) → 메일 스팸 신호 완화
+        return f"{SERVER_BASE_URL}/d/{file_id}"
     # 폴백: 로컬 임시 파일 유지 + /download (서버 재시작 시 만료될 수 있음)
     expiry_map[file_id] = datetime.now() + timedelta(hours=24)
     timer = threading.Timer(LINK_TTL_SECONDS, lambda: _cleanup(zip_path, file_id))
@@ -924,21 +925,41 @@ def download_company_docs():
 # 다운로드 엔드포인트
 # ═══════════════════════════════════════════════════
 
+_EXPIRED_HTML = """<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+</head>
+<body style="font-family:'Pretendard','Malgun Gothic',sans-serif;text-align:center;padding:72px 24px;background:#f0f3f8;color:#444;">
+  <div style="font-size:46px;margin-bottom:14px;">⏳</div>
+  <h2 style="color:#003389;font-size:20px;margin:0 0 10px;">다운로드 링크가 만료되었습니다</h2>
+  <p style="color:#777;font-size:14px;line-height:1.8;margin:0;">기술자료 다운로드 링크는 발송 후 <b>24시간 동안</b> 유효합니다.<br>담당 영업사원에게 재발송을 요청해 주세요.</p>
+</body></html>"""
+
+
+@app.route("/d/<file_id>")
+def download_redirect(file_id: str):
+    """메일에 노출되는 친화적 다운로드 주소. Supabase 실제 파일로 리다이렉트(스팸신호 완화)."""
+    if not re.match(r"^[A-Za-z0-9-]{8,64}$", file_id):
+        return _EXPIRED_HTML, 404
+    if SUPABASE_URL:
+        target = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{file_id}.zip"
+        try:
+            h = requests.head(target, timeout=8)
+            if h.status_code == 200:
+                return redirect(target, code=302)
+            return _EXPIRED_HTML, 410          # 24h 경과로 삭제됨
+        except Exception:
+            return redirect(target, code=302)  # 점검 실패 시 다운로드는 막지 않음
+    return redirect(f"{SERVER_BASE_URL}/download/{file_id}", code=302)
+
+
 @app.route("/download/<file_id>")
 def download_zip(file_id: str):
     zip_path = os.path.join(TEMP_DIR, f"{file_id}.zip")
     expiry = expiry_map.get(file_id)
 
     if not expiry or datetime.now() > expiry or not os.path.exists(zip_path):
-        return """
-        <html>
-        <head><meta charset="utf-8"></head>
-        <body style="font-family:sans-serif;text-align:center;padding:80px;background:#f8f9fa;">
-          <h2 style="color:#666;">링크가 만료되었습니다</h2>
-          <p style="color:#999;">유효기간(24시간)이 지난 링크입니다.<br>카카오톡 채널에서 다시 요청해주세요.</p>
-        </body>
-        </html>
-        """, 410
+        return _EXPIRED_HTML, 410
 
     return send_file(
         zip_path,
