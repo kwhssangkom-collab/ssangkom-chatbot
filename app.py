@@ -504,13 +504,10 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:30px 0 46px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 26px rgba(16,38,76,.10);">
-        <!-- 로고 -->
-        <tr><td style="padding:26px 36px 18px;">
-          <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM" width="148" height="auto" style="display:block;">
-        </td></tr>
-        <!-- 헤더 -->
-        <tr><td bgcolor="#001a4d" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:22px 36px;">
-          <p style="color:#fff;font-size:21px;font-weight:700;margin:0;line-height:1.35;letter-spacing:-.3px;">{header_title}</p>
+        <!-- 헤더 (로고 + 제목 통합) -->
+        <tr><td bgcolor="#001a4d" align="center" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:30px 36px 26px;text-align:center;">
+          <img src="https://ssangkom.co.kr/img/hd_logo.png" alt="SSANGKOM" width="158" style="display:inline-block;border:0;outline:none;">
+          <p style="color:#cfe0ff;font-size:14.5px;font-weight:600;margin:13px 0 0;letter-spacing:.3px;">{header_title}</p>
         </td></tr>
         <!-- 인사말 -->
         <tr><td style="padding:26px 36px 2px;">
@@ -1101,7 +1098,7 @@ def request_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:36px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:36px;filter:drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
 .header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .tabs{{display:flex;background:#fff;border-bottom:2px solid #e0e6f0;position:sticky;top:0;z-index:10}}
 .tab{{flex:1;padding:13px 6px;text-align:center;font-size:12px;font-weight:600;color:#888;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.2s;line-height:1.35}}
@@ -1183,7 +1180,7 @@ body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
 <body>
 
 <div class="header">
-  <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM">
+  <img src="https://ssangkom.co.kr/img/hd_logo.png" alt="SSANGKOM">
   <span>기술자료 요청</span>
 </div>
 
@@ -2186,7 +2183,7 @@ def status_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:36px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:36px;filter:drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
 .header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .section-title{{font-size:13px;font-weight:700;color:#003389;letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase}}
@@ -2219,7 +2216,7 @@ body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
 .note{{font-size:12px;color:#999;text-align:center;padding:4px 20px 22px;line-height:1.7}}
 </style></head><body>
 <div class="header">
-  <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM">
+  <img src="https://ssangkom.co.kr/img/hd_logo.png" alt="SSANGKOM">
   <span>기술자료 발송 처리 현황</span>
 </div>
 <div class="section">
@@ -2296,7 +2293,7 @@ def guide_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:44px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:44px;filter:drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
 .header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .badge{{display:inline-block;background:#003389;color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:20px;margin-bottom:12px}}
@@ -2314,7 +2311,7 @@ body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
 </head>
 <body>
 <div class="header">
-  <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM">
+  <img src="https://ssangkom.co.kr/img/hd_logo.png" alt="SSANGKOM">
   <span>서비스 이용안내</span>
 </div>
 
