@@ -803,10 +803,12 @@ _EXPIRED_HTML = """<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 </head>
-<body style="font-family:'Pretendard','Malgun Gothic',sans-serif;text-align:center;padding:72px 24px;background:#f0f3f8;color:#444;">
-  <div style="font-size:46px;margin-bottom:14px;">⏳</div>
-  <h2 style="color:#003389;font-size:20px;margin:0 0 10px;">다운로드 링크가 만료되었습니다</h2>
-  <p style="color:#777;font-size:14px;line-height:1.8;margin:0;">기술자료 다운로드 링크는 발송 후 <b>24시간 동안</b> 유효합니다.<br>담당 영업사원에게 재발송을 요청해 주세요.</p>
+<body style="margin:0;font-family:'Pretendard','Malgun Gothic',sans-serif;background:#f0f3f8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(16,38,76,.12);max-width:400px;width:100%;text-align:center;padding:40px 28px;">
+    <div style="font-size:44px;margin-bottom:14px;">&#9203;</div>
+    <h2 style="color:#0a2a66;font-size:19px;font-weight:800;margin:0 0 12px;">다운로드 링크가 만료되었습니다</h2>
+    <p style="color:#8a93a3;font-size:13.5px;line-height:1.85;margin:0;">기술자료 다운로드 링크는 발송 후 <b style="color:#5a6473;">24시간 동안</b> 유효합니다.<br>담당 영업사원에게 재발송을 요청해 주세요.</p>
+  </div>
 </body></html>"""
 
 
@@ -2297,15 +2299,22 @@ function pickSDomain() {{
 
 @app.route("/")
 def index():
-    return """
-    <html><head><meta charset="utf-8">
-    <style>body{font-family:sans-serif;text-align:center;padding:80px;background:#f4f6f9;}
-    h2{color:#003389;}p{color:#555;}</style></head>
-    <body>
-      <h2>쌍곰 기술자료 자동발송 서버</h2>
-      <p>정상 운영 중입니다.</p>
-    </body></html>
-    """
+    return """<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+</head>
+<body style="margin:0;font-family:'Pretendard','Malgun Gothic',sans-serif;background:#f0f3f8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(16,38,76,.12);max-width:420px;width:100%;overflow:hidden;text-align:center;">
+    <div style="background:linear-gradient(135deg,#001a4d,#1456c8);padding:30px 24px;">
+      <img src="https://ssangkom.co.kr/img/hd_logo.png" alt="SSANGKOM" width="150" style="filter:drop-shadow(0 2px 9px rgba(0,0,0,.3));">
+    </div>
+    <div style="padding:30px 26px 34px;">
+      <div style="display:inline-block;background:#e6f4ea;color:#1a7f37;font-size:13px;font-weight:700;padding:5px 14px;border-radius:20px;margin-bottom:14px;">&#9679; 정상 운영 중</div>
+      <h2 style="color:#0a2a66;font-size:18px;font-weight:800;margin:0 0 8px;">기술자료 자동발송 서버</h2>
+      <p style="color:#8a93a3;font-size:13px;line-height:1.7;margin:0;">서비스가 정상적으로 동작하고 있습니다.</p>
+    </div>
+  </div>
+</body></html>"""
 
 
 
@@ -2328,7 +2337,7 @@ def guide_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:44px;filter:drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:36px;filter:drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
 .header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .badge{{display:inline-block;background:#003389;color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:20px;margin-bottom:12px}}
@@ -2341,7 +2350,7 @@ body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
 .divider{{margin:14px 0;border:none;border-top:1px solid #f0f3f8}}
 .note{{font-size:13px;color:#888;margin-top:0}}
 .cta-wrap{{padding:8px 12px 28px}}
-.cta-btn{{display:block;width:100%;padding:15px;background:#003389;color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;font-family:inherit}}
+.cta-btn{{display:block;width:100%;padding:15px;background:#003389;background-image:linear-gradient(135deg,#003389,#1456c8);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;font-family:inherit;box-shadow:0 6px 16px rgba(0,40,120,.26)}}
 </style>
 </head>
 <body>
