@@ -1083,7 +1083,7 @@ def admin_logs():
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 *{{box-sizing:border-box}} body{{margin:0;font-family:'Pretendard','Malgun Gothic',sans-serif;background:#f0f3f8;color:#222}}
-.top{{background:linear-gradient(135deg,#003389,#0a4bb5);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}}
+.top{{background:linear-gradient(135deg,#001a4d,#1456c8);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}}
 .top h1{{font-size:18px;margin:0}}
 .stat{{font-size:13px;background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px}}
 .wrap{{padding:14px;overflow-x:auto}}
@@ -1166,7 +1166,7 @@ def admin_docs_health():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic',sans-serif;background:#f0f3f8;color:#222}}
-.top{{background:linear-gradient(135deg,#003389,#0a4bb5);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}}
+.top{{background:linear-gradient(135deg,#001a4d,#1456c8);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}}
 .top h1{{font-size:18px;margin:0}}
 .stat{{font-size:13px;background:rgba(255,255,255,.16);border-radius:8px;padding:4px 10px}}
 .back{{margin-left:auto;color:#fff;font-size:13px;text-decoration:none;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:8px}}
@@ -1224,9 +1224,10 @@ def request_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{background:linear-gradient(135deg,#003389,#0a4bb5);padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
-.header img{{height:36px;filter:brightness(0) invert(1)}}
-.header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}
+.header::before{{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.4px);background-size:18px 18px;pointer-events:none;z-index:0}}
+.header img{{height:36px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .tabs{{display:flex;background:#fff;border-bottom:2px solid #e0e6f0;position:sticky;top:0;z-index:10}}
 .tab{{flex:1;padding:13px 6px;text-align:center;font-size:12px;font-weight:600;color:#888;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.2s;line-height:1.35}}
 .tab.active{{color:#003389;border-bottom-color:#003389}}
@@ -2310,9 +2311,10 @@ def status_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{background:linear-gradient(135deg,#003389,#0a4bb5);padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
-.header img{{height:36px;filter:brightness(0) invert(1)}}
-.header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}
+.header::before{{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.4px);background-size:18px 18px;pointer-events:none;z-index:0}}
+.header img{{height:36px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .section-title{{font-size:13px;font-weight:700;color:#003389;letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase}}
 .email-line{{display:flex;gap:8px}}
@@ -2421,9 +2423,10 @@ def guide_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{background:linear-gradient(135deg,#003389,#0a4bb5);padding:20px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}}
-.header img{{height:44px;filter:brightness(0) invert(1)}}
-.header span{{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}
+.header::before{{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.4px);background-size:18px 18px;pointer-events:none;z-index:0}}
+.header img{{height:44px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .badge{{display:inline-block;background:#003389;color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:20px;margin-bottom:12px}}
 .section h3{{font-size:17px;font-weight:700;color:#1a1a1a;margin-bottom:10px}}
