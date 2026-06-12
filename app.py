@@ -507,7 +507,7 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
 
           <!-- 헤더 -->
           <tr>
-            <td style="background:#003389;padding:24px 36px 26px;">
+            <td bgcolor="#001a4d" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:24px 36px 26px;">
               <p style="color:#ffffff;font-size:24px;font-weight:700;
                          margin:0;line-height:1.4;letter-spacing:-0.3px;">
                 기술자료 이메일 송부
@@ -550,10 +550,10 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
           <tr>
             <td style="padding:24px 36px 8px;text-align:center;">
               <a href="{download_url}"
-                 style="display:inline-block;background:#003389;color:#ffffff;
+                 style="display:inline-block;background:#003389;background-image:linear-gradient(135deg,#003389 0%,#1456c8 100%);color:#ffffff;
                         text-decoration:none;font-size:17px;font-weight:700;
                         padding:17px 52px;border-radius:8px;letter-spacing:0.1px;
-                        box-shadow:0 4px 14px rgba(0,51,137,0.28);">
+                        box-shadow:0 6px 16px rgba(0,40,120,0.32);">
                 &#9660;&nbsp; 기술자료 다운로드
               </a>
               <p style="margin:12px 0 0;font-size:13px;color:#666;text-align:center;">
@@ -634,7 +634,7 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
         <tr><td style="padding:28px 36px 24px;">
           <img src="https://ssangkom.co.kr/img/hd_logo_on.png" alt="SSANGKOM" width="160" height="auto" style="display:block;">
         </td></tr>
-        <tr><td style="background:#003389;padding:22px 36px 24px;">
+        <tr><td bgcolor="#001a4d" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:22px 36px 24px;">
           <p style="color:#fff;font-size:22px;font-weight:700;margin:0;line-height:1.4;letter-spacing:-.3px;">{header_title}</p>
         </td></tr>
         <tr><td style="padding:24px 36px 0;">
@@ -642,7 +642,7 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
         </td></tr>
         {body_inner}
         <tr><td style="padding:22px 36px 8px;text-align:center;">
-          <a href="{download_url}" style="display:inline-block;background:#003389;color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 48px;border-radius:8px;box-shadow:0 4px 14px rgba(0,51,137,.28);">&#9660;&nbsp; {btn_label}</a>
+          <a href="{download_url}" style="display:inline-block;background:#003389;background-image:linear-gradient(135deg,#003389 0%,#1456c8 100%);color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 48px;border-radius:8px;box-shadow:0 6px 16px rgba(0,40,120,.32);">&#9660;&nbsp; {btn_label}</a>
           <p style="margin:10px 0 0;font-size:12px;color:#888;text-align:center;">※ 링크 유효기간: 발송 후 24시간</p>
         </td></tr>
         {basic_btn_html}
@@ -1224,9 +1224,7 @@ def request_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}
-.header::before{{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.4px);background-size:18px 18px;pointer-events:none;z-index:0}}
-.header img{{height:36px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:36px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
 .header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .tabs{{display:flex;background:#fff;border-bottom:2px solid #e0e6f0;position:sticky;top:0;z-index:10}}
 .tab{{flex:1;padding:13px 6px;text-align:center;font-size:12px;font-weight:600;color:#888;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.2s;line-height:1.35}}
@@ -2311,9 +2309,7 @@ def status_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}
-.header::before{{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.4px);background-size:18px 18px;pointer-events:none;z-index:0}}
-.header img{{height:36px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:36px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
 .header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .section-title{{font-size:13px;font-weight:700;color:#003389;letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase}}
@@ -2423,9 +2419,7 @@ def guide_page():
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f3f8;min-height:100vh}}
-.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}
-.header::before{{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.4px);background-size:18px 18px;pointer-events:none;z-index:0}}
-.header img{{height:44px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
+.header{{position:relative;overflow:hidden;padding:24px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:radial-gradient(ellipse 65% 90% at 50% 22%,rgba(90,150,255,.32),transparent 70%),linear-gradient(135deg,#001a4d 0%,#0a3aa0 58%,#1456c8 100%)}}.header img{{height:44px;filter:brightness(0) invert(1) drop-shadow(0 2px 9px rgba(0,0,0,.30));position:relative;z-index:1}}
 .header span{{position:relative;z-index:1;color:#fff;font-size:18px;font-weight:700;letter-spacing:-.3px}}
 .section{{background:#fff;margin:12px;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,.07)}}
 .badge{{display:inline-block;background:#003389;color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:20px;margin-bottom:12px}}
