@@ -75,6 +75,20 @@ def main():
             print(f"삭제 실패 {d.status_code}: {d.text[:200]}")
             sys.exit(1)
 
+    # 오래(15분+) 멈춘 '처리중' 기록 정리: 서버 재시작 등으로 미완료된 발송을 '실패'로 마감
+    try:
+        cutoff_iso = (now - timedelta(minutes=15)).isoformat()
+        pr = requests.patch(
+            f"{URL}/rest/v1/send_logs",
+            params={"status": "eq.처리중", "created_at": f"lt.{cutoff_iso}"},
+            headers={**AUTH, "Prefer": "return=minimal"},
+            json={"status": "failed", "error": "처리 중단(서버 재시작 추정) — 재전송 필요"},
+            timeout=15,
+        )
+        print(f"멈춘 '처리중' 기록 정리: HTTP {pr.status_code}")
+    except Exception as e:
+        print(f"'처리중' 정리 실패: {e}")
+
 
 if __name__ == "__main__":
     main()

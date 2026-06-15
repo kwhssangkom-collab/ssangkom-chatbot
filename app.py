@@ -920,16 +920,17 @@ def admin_logs():
                  if broken_n else "")
 
     def badge(s):
-        c = {"success": "#1a7f37", "partial": "#b7791f", "failed": "#dc2f3a", "처리중": "#888"}.get(s, "#888")
-        t = {"success": "성공", "partial": "부분", "failed": "실패"}.get(s, _esc(s) or "-")
+        c = {"success": "#1a7f37", "partial": "#b7791f", "failed": "#dc2f3a", "처리중": "#888", "중단": "#dc2f3a"}.get(s, "#888")
+        t = {"success": "성공", "partial": "부분", "failed": "실패", "중단": "중단됨"}.get(s, _esc(s) or "-")
         return f'<span style="background:{c};color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700">{t}</span>'
 
     mode_kr = {"all": "품목별 전체", "specific": "직접선택", "basic": "기본서류"}
     trs = ""
     for x in rows:
+        st   = _eff_status(x)
         ts   = _fmt_kst(x.get("created_at", ""))
         cnt  = f'{x.get("files_actual", "?")}/{x.get("files_requested", "?")}'
-        warn = ' style="color:#dc2f3a;font-weight:700"' if (x.get("status") in ("partial", "failed")) else ""
+        warn = ' style="color:#dc2f3a;font-weight:700"' if (st in ("partial", "failed", "중단")) else ""
         link = x.get("download_url") or ""
         link_html = f'<a href="{_esc(link)}" target="_blank">열기</a>' if link.startswith("http") else "-"
         req = x.get("requester") or ""
@@ -940,7 +941,7 @@ def admin_logs():
         trs += (
             "<tr>"
             f"<td class='nowrap'>{ts}</td>"
-            f"<td>{badge(x.get('status'))}</td>"
+            f"<td>{badge(st)}</td>"
             f"<td class='nowrap'>{req_html}</td>"
             f"<td class='nowrap'>{_esc(x.get('email'))}</td>"
             f"<td class='nowrap'>{mode_kr.get(x.get('mode'), _esc(x.get('mode')))}</td>"
@@ -2090,6 +2091,15 @@ def _age_hours(ts: str):
         return None
 
 
+def _eff_status(x: dict) -> str:
+    """오래(10분+)된 '처리중'은 '중단'으로 간주(서버 재시작 등으로 미완료)."""
+    if x.get("status") == "처리중":
+        age = _age_hours(x.get("created_at", "") or "")
+        if age is not None and age * 60 >= 10:
+            return "중단"
+    return x.get("status")
+
+
 @app.route("/status/resend", methods=["POST"])
 def status_resend():
     """영업사원용: 동일 자료를 재발송. 원본 수신처(email) 또는 입력한 다른 주소(to)로 전송."""
@@ -2152,13 +2162,14 @@ def status_page():
 
     def sbadge(s):
         m = {"처리중": ("#6b7280", "처리 중"), "success": ("#1a7f37", "발송 완료"),
-             "partial": ("#b7791f", "일부 누락"), "failed": ("#dc2f3a", "발송 실패")}
+             "partial": ("#b7791f", "일부 누락"), "failed": ("#dc2f3a", "발송 실패"),
+             "중단": ("#dc2f3a", "중단됨")}
         c, t = m.get(s, ("#888", _esc(s) or "-"))
         return f'<span style="background:{c};color:#fff;border-radius:14px;padding:3px 12px;font-size:13px;font-weight:700">{t}</span>'
 
     cards = ""
     for x in rows:
-        status = x.get("status")
+        status = _eff_status(x)
         ts   = _fmt_kst(x.get("created_at", ""))
         cnt  = f'{x.get("files_actual", 0)}/{x.get("files_requested", 0)}'
         link = x.get("download_url") or ""
@@ -2169,6 +2180,8 @@ def status_page():
         # 링크 유효성 안내(영업사원 관점)
         if status == "처리중":
             info = '<span class="muted">발송 처리 중입니다… (자동으로 새로고침됩니다)</span>'
+        elif status == "중단":
+            info = '<span class="exp">처리가 중단되었습니다. 아래에서 재전송해 주세요.</span>'
         elif link_ok:
             rem = max(0, int(24 - age)) if age is not None else 24
             info = (f'<a class="open" href="{_esc(link)}" target="_blank">파일 직접 다운로드</a>'
@@ -2178,9 +2191,9 @@ def status_page():
         else:
             info = '<span class="exp">다운로드 링크 없음</span>'
 
-        # 재전송(완료/실패 건만). 비워두면 원본 수신처, 입력하면 다른 주소로 전송.
+        # 재전송(완료/실패/중단 건만). 비워두면 원본 수신처, 입력하면 다른 주소로 전송.
         resend = ""
-        if status in ("success", "partial", "failed") and str(x.get("id", "")).isdigit():
+        if status in ("success", "partial", "failed", "중단") and str(x.get("id", "")).isdigit():
             resend = (
                 f'<form method="post" action="/status/resend" '
                 f'onsubmit="return confirm(this.to.value ? (this.to.value+\'\\n위 주소로 발송할까요?\') : (\'{_esc(email)}\\n위 주소로 동일 자료를 다시 발송할까요?\'))">'
