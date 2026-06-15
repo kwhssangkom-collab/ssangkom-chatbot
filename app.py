@@ -417,16 +417,16 @@ def build_company_docs_html(server_base_url: str) -> str:
     """회사 기본서류 단일 ZIP 다운로드 버튼 HTML"""
     company_docs_zip_url = f"{server_base_url}/download-company-docs"
     return f"""
-    <tr><td style="padding:18px 36px 0;">
+    <tr><td style="padding:32px 36px 0;">
       <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #eef1f6;font-size:0;line-height:0;">&nbsp;</td></tr></table>
     </td></tr>
     <tr>
-      <td style="padding:18px 36px 0;text-align:center;">
+      <td style="padding:22px 36px 0;text-align:center;">
         <a href="{company_docs_zip_url}"
            style="display:inline-block;background:#e8ecf3;background-image:linear-gradient(135deg,#eef1f7 0%,#dbe1ec 100%);color:#1a3d86;text-decoration:none;font-size:15.5px;font-weight:700;padding:15px 42px;border-radius:10px;border:1px solid #d3dbe8;box-shadow:0 4px 12px rgba(60,80,130,.16);">
           &#9660;&nbsp; 회사 기본서류 다운로드
         </a>
-        <p style="font-size:13px;color:#8a93a3;margin:11px 0 0;line-height:1.7;">국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외 &middot; 홈페이지 최신본 자동 제공</p>
+        <p style="font-size:13px;color:#8a93a3;margin:13px 0 0;line-height:1.7;">국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외 &middot; 홈페이지 최신본 자동 제공</p>
       </td>
     </tr>"""
 
@@ -468,7 +468,7 @@ def send_email(to_email: str, product_names: list[str], download_url: str):
         for name in product_names
     )
     body = (
-        '<tr><td style="padding:18px 36px 0;">'
+        '<tr><td style="padding:24px 36px 0;">'
         '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">'
         '<tr><td style="padding:18px 22px 20px;">'
         '<p style="font-size:13px;color:#003389;font-weight:700;letter-spacing:1px;margin:0 0 12px;">포함된 품목</p>'
@@ -510,19 +510,19 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
           <p style="color:#dbe8ff;font-size:19.5px;font-weight:700;margin:15px 0 0;letter-spacing:.2px;">{header_title}</p>
         </td></tr>
         <!-- 인사말 -->
-        <tr><td style="padding:28px 36px 2px;">
-          <p style="color:#2c3140;font-size:17px;line-height:1.85;margin:0;">안녕하세요.<br>요청하신 기술자료의 다운로드 링크를 아래와 같이 보내드립니다.</p>
+        <tr><td style="padding:34px 36px 2px;">
+          <p style="color:#2c3140;font-size:17px;line-height:1.9;margin:0;">안녕하세요.<br>요청하신 기술자료의 다운로드 링크를 아래와 같이 보내드립니다.</p>
         </td></tr>
         {body_inner}
         <!-- 메인 다운로드 버튼 -->
-        <tr><td style="padding:26px 36px 4px;text-align:center;">
+        <tr><td style="padding:36px 36px 6px;text-align:center;">
           <a href="{download_url}" style="display:inline-block;background:#003389;background-image:linear-gradient(135deg,#003389 0%,#1456c8 100%);color:#fff;text-decoration:none;font-size:18px;font-weight:700;padding:17px 54px;border-radius:10px;box-shadow:0 6px 16px rgba(0,40,120,.30);">&#9660;&nbsp; {btn_label}</a>
           <p style="margin:12px 0 0;font-size:13px;color:#9aa3b2;">링크 유효기간 : 발송 후 24시간</p>
         </td></tr>
         {basic_btn_html}
         <!-- 푸터 -->
-        <tr><td style="padding:22px 36px 28px;">
-          <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #edf0f5;padding-top:18px;">
+        <tr><td style="padding:34px 36px 30px;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #edf0f5;padding-top:22px;">
             <p style="color:#7a8394;font-size:13.5px;line-height:1.9;margin:0;">본 메일은 발신 전용으로 회신되지 않습니다.<br>기술자료 관련 문의는 담당 영업사원 또는 기술상담실 <b style="color:#4a5466;">080-768-3030</b>으로 연락 바랍니다.</p>
             <p style="margin:12px 0 0;font-size:12px;color:#a6aebd;letter-spacing:.3px;">SSANGKOM&nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://ssangkom.co.kr" style="color:#6b7585;text-decoration:none;">ssangkom.co.kr</a></p>
           </td></tr></table>
@@ -542,7 +542,7 @@ def send_email_specific(to_email: str, summary: list, download_url: str):
             for label in item["labels"]
         )
         product_blocks += f'<p style="font-size:15px;font-weight:700;color:#003389;margin:12px 0 5px;">{item["product"]}</p><table width="100%" cellpadding="0" cellspacing="0">{doc_rows}</table>'
-    body = f"""<tr><td style="padding:18px 36px 0;">
+    body = f"""<tr><td style="padding:24px 36px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
         <tr><td style="padding:18px 22px 20px;">
           <p style="font-size:13px;color:#003389;font-weight:700;letter-spacing:1px;margin:0 0 8px;">포함된 기술자료</p>
@@ -561,7 +561,7 @@ def send_email_basic(to_email: str, download_url: str, doc_labels: list = None):
         f'<tr><td style="padding:6px 0;color:#1a1a1a;font-size:16.5px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {label}</td></tr>'
         for label in doc_labels
     )
-    body = f"""<tr><td style="padding:18px 36px 0;">
+    body = f"""<tr><td style="padding:24px 36px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
         <tr><td style="padding:18px 22px 20px;">
           <p style="font-size:13px;color:#003389;font-weight:700;letter-spacing:1px;margin:0 0 12px;">포함된 서류</p>
