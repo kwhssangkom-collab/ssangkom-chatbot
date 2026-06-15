@@ -524,7 +524,11 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
         <tr><td style="padding:34px 36px 30px;">
           <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #edf0f5;padding-top:22px;">
             <p style="color:#7a8394;font-size:13.5px;line-height:1.9;margin:0;">본 메일은 발신 전용으로 회신되지 않습니다.<br>기술자료 관련 문의는 담당 영업사원 또는 기술상담실 <b style="color:#4a5466;">080-768-3030</b>으로 연락 바랍니다.</p>
-            <p style="margin:12px 0 0;font-size:12px;color:#a6aebd;letter-spacing:.3px;">SSANGKOM&nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://ssangkom.co.kr" style="color:#6b7585;text-decoration:none;">ssangkom.co.kr</a></p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;"><tr><td style="border-top:1px solid #f0f2f6;padding-top:18px;">
+              <p style="margin:0;font-size:14.5px;font-weight:700;color:#2c3140;letter-spacing:-.2px;">(주)쌍곰&nbsp;&nbsp;<span style="font-weight:500;color:#9aa3b2;font-size:12.5px;letter-spacing:.3px;">SSANGKOM Corp.</span></p>
+              <p style="margin:8px 0 0;font-size:12.5px;color:#7a8394;line-height:1.7;">Tel 02-2271-3030&nbsp;&nbsp;·&nbsp;&nbsp;Fax 02-2271-3035&nbsp;&nbsp;·&nbsp;&nbsp;<a href="https://ssangkom.co.kr" style="color:#3a5fa8;text-decoration:none;">ssangkom.co.kr</a></p>
+              <p style="margin:6px 0 0;font-size:12px;color:#9aa3b2;line-height:1.75;">서울특별시 중구 퇴계로286(쌍림동) 쌍림빌딩 (04615)<br>Ssanglim Bldg, 286 Toegye-ro, Jung-gu, Seoul, Rep. of KOREA</p>
+            </td></tr></table>
           </td></tr></table>
         </td></tr>
       </table>
