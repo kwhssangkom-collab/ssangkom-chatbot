@@ -504,10 +504,10 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:30px 0 46px;">
     <tr><td align="center">
       <table width="660" cellpadding="0" cellspacing="0" style="width:660px;max-width:660px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 26px rgba(16,38,76,.10);">
-        <!-- 헤더 (로고 + 제목 통합) -->
-        <tr><td bgcolor="#001a4d" align="center" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:32px 36px 28px;text-align:center;">
-          <img src="https://ssangkom.co.kr/img/hd_logo.png" alt="SSANGKOM" width="158" style="display:inline-block;border:0;outline:none;">
-          <p style="color:#dbe8ff;font-size:19.5px;font-weight:700;margin:15px 0 0;letter-spacing:.2px;">{header_title}</p>
+        <!-- 헤더 (로고 + 제목, 좌측 정렬) -->
+        <tr><td bgcolor="#001a4d" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:30px 38px 28px;">
+          <img src="https://ssangkom.co.kr/img/hd_logo.png" alt="SSANGKOM" width="152" style="display:block;border:0;outline:none;">
+          <p style="color:#dbe8ff;font-size:19px;font-weight:700;margin:14px 0 0;letter-spacing:.2px;">{header_title}</p>
         </td></tr>
         <!-- 인사말 -->
         <tr><td style="padding:34px 36px 2px;">
