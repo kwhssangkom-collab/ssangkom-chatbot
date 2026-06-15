@@ -510,7 +510,7 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
           <p style="color:#eef2f8;font-size:19px;font-weight:700;margin:14px 0 0;letter-spacing:.2px;">{header_title}</p>
         </td></tr>
         <!-- 인사말 -->
-        <tr><td style="padding:34px 36px 2px;">
+        <tr><td style="padding:34px 36px 18px;">
           <p style="color:#2c3140;font-size:17px;line-height:1.9;margin:0;">안녕하세요.<br>쌍곰 제품을 이용해 주시는 고객님께 깊은 감사의 말씀을 드립니다.<br><br>요청하신 자료를 아래와 같이 송부해 드리오니,<br>아래 버튼을 눌러 다운로드 받으시기 바랍니다.<br><br>감사합니다.</p>
         </td></tr>
         {body_inner}
