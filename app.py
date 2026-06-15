@@ -423,10 +423,10 @@ def build_company_docs_html(server_base_url: str) -> str:
     <tr>
       <td style="padding:18px 36px 0;text-align:center;">
         <a href="{company_docs_zip_url}"
-           style="display:inline-block;background:#ffffff;color:#003389;text-decoration:none;font-size:14px;font-weight:700;padding:13px 34px;border-radius:9px;border:1.5px solid #cdd8ee;">
+           style="display:inline-block;background:#ffffff;color:#003389;text-decoration:none;font-size:15.5px;font-weight:700;padding:14px 36px;border-radius:9px;border:1.5px solid #cdd8ee;">
           &#9660;&nbsp; 회사 기본서류 다운로드
         </a>
-        <p style="font-size:12px;color:#9aa3b2;margin:10px 0 0;line-height:1.65;">국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외 &middot; 홈페이지 최신본 자동 제공</p>
+        <p style="font-size:13px;color:#8a93a3;margin:11px 0 0;line-height:1.7;">국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외 &middot; 홈페이지 최신본 자동 제공</p>
       </td>
     </tr>"""
 
@@ -464,14 +464,14 @@ def _send_via_gmail_api(to_email: str, raw_msg_bytes: bytes):
 def send_email(to_email: str, product_names: list[str], download_url: str):
     """품목별 전체 발송 메일 (공용 _email_shell 사용)."""
     rows = "".join(
-        f'<tr><td style="padding:5px 0;color:#1a1a1a;font-size:15px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {name}</td></tr>'
+        f'<tr><td style="padding:6px 0;color:#1a1a1a;font-size:16.5px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {name}</td></tr>'
         for name in product_names
     )
     body = (
-        '<tr><td style="padding:16px 36px 0;">'
+        '<tr><td style="padding:18px 36px 0;">'
         '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">'
-        '<tr><td style="padding:16px 20px 18px;">'
-        '<p style="font-size:11px;color:#003389;font-weight:700;letter-spacing:1.8px;margin:0 0 10px;text-transform:uppercase;">포함된 품목</p>'
+        '<tr><td style="padding:18px 22px 20px;">'
+        '<p style="font-size:13px;color:#003389;font-weight:700;letter-spacing:1px;margin:0 0 12px;">포함된 품목</p>'
         f'<table width="100%" cellpadding="0" cellspacing="0">{rows}</table>'
         '</td></tr></table></td></tr>'
     )
@@ -507,24 +507,24 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
         <!-- 헤더 (로고 + 제목 통합) -->
         <tr><td bgcolor="#001a4d" align="center" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:30px 36px 26px;text-align:center;">
           <img src="https://ssangkom.co.kr/img/hd_logo.png" alt="SSANGKOM" width="158" style="display:inline-block;border:0;outline:none;">
-          <p style="color:#cfe0ff;font-size:14.5px;font-weight:600;margin:13px 0 0;letter-spacing:.3px;">{header_title}</p>
+          <p style="color:#cfe0ff;font-size:16.5px;font-weight:600;margin:14px 0 0;letter-spacing:.3px;">{header_title}</p>
         </td></tr>
         <!-- 인사말 -->
-        <tr><td style="padding:26px 36px 2px;">
-          <p style="color:#333;font-size:15px;line-height:1.85;margin:0;">안녕하세요.<br>요청하신 기술자료의 다운로드 링크를 아래와 같이 보내드립니다.</p>
+        <tr><td style="padding:28px 36px 2px;">
+          <p style="color:#2c3140;font-size:17px;line-height:1.85;margin:0;">안녕하세요.<br>요청하신 기술자료의 다운로드 링크를 아래와 같이 보내드립니다.</p>
         </td></tr>
         {body_inner}
         <!-- 메인 다운로드 버튼 -->
         <tr><td style="padding:26px 36px 4px;text-align:center;">
-          <a href="{download_url}" style="display:inline-block;background:#003389;background-image:linear-gradient(135deg,#003389 0%,#1456c8 100%);color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 50px;border-radius:10px;box-shadow:0 6px 16px rgba(0,40,120,.30);">&#9660;&nbsp; {btn_label}</a>
-          <p style="margin:11px 0 0;font-size:12px;color:#9aa3b2;">링크 유효기간 : 발송 후 24시간</p>
+          <a href="{download_url}" style="display:inline-block;background:#003389;background-image:linear-gradient(135deg,#003389 0%,#1456c8 100%);color:#fff;text-decoration:none;font-size:18px;font-weight:700;padding:17px 54px;border-radius:10px;box-shadow:0 6px 16px rgba(0,40,120,.30);">&#9660;&nbsp; {btn_label}</a>
+          <p style="margin:12px 0 0;font-size:13px;color:#9aa3b2;">링크 유효기간 : 발송 후 24시간</p>
         </td></tr>
         {basic_btn_html}
         <!-- 푸터 -->
         <tr><td style="padding:22px 36px 28px;">
           <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #edf0f5;padding-top:18px;">
-            <p style="color:#8a93a3;font-size:12px;line-height:1.95;margin:0;">본 메일은 발신 전용으로 회신되지 않습니다.<br>기술자료 관련 문의는 담당 영업사원 또는 기술상담실 <b style="color:#5a6473;">080-768-3030</b>으로 연락 바랍니다.</p>
-            <p style="margin:12px 0 0;font-size:11px;color:#b3bac6;letter-spacing:.3px;">SSANGKOM&nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://ssangkom.co.kr" style="color:#7b8493;text-decoration:none;">ssangkom.co.kr</a></p>
+            <p style="color:#7a8394;font-size:13.5px;line-height:1.9;margin:0;">본 메일은 발신 전용으로 회신되지 않습니다.<br>기술자료 관련 문의는 담당 영업사원 또는 기술상담실 <b style="color:#4a5466;">080-768-3030</b>으로 연락 바랍니다.</p>
+            <p style="margin:12px 0 0;font-size:12px;color:#a6aebd;letter-spacing:.3px;">SSANGKOM&nbsp;&nbsp;|&nbsp;&nbsp;<a href="https://ssangkom.co.kr" style="color:#6b7585;text-decoration:none;">ssangkom.co.kr</a></p>
           </td></tr></table>
         </td></tr>
       </table>
@@ -538,14 +538,14 @@ def send_email_specific(to_email: str, summary: list, download_url: str):
     product_blocks = ""
     for item in summary:
         doc_rows = "".join(
-            f'<tr><td style="padding:2px 0;color:#444;font-size:14px;line-height:1.6;">&#8226; {label}</td></tr>'
+            f'<tr><td style="padding:4px 0;color:#333;font-size:15.5px;line-height:1.6;">&#8226; {label}</td></tr>'
             for label in item["labels"]
         )
-        product_blocks += f'<p style="font-size:13px;font-weight:700;color:#003389;margin:10px 0 4px;">{item["product"]}</p><table width="100%" cellpadding="0" cellspacing="0">{doc_rows}</table>'
-    body = f"""<tr><td style="padding:16px 36px 0;">
+        product_blocks += f'<p style="font-size:15px;font-weight:700;color:#003389;margin:12px 0 5px;">{item["product"]}</p><table width="100%" cellpadding="0" cellspacing="0">{doc_rows}</table>'
+    body = f"""<tr><td style="padding:18px 36px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
-        <tr><td style="padding:16px 20px 18px;">
-          <p style="font-size:11px;color:#003389;font-weight:700;letter-spacing:1.8px;margin:0 0 10px;text-transform:uppercase;">포함된 기술자료</p>
+        <tr><td style="padding:18px 22px 20px;">
+          <p style="font-size:13px;color:#003389;font-weight:700;letter-spacing:1px;margin:0 0 8px;">포함된 기술자료</p>
           {product_blocks}
         </td></tr>
       </table>
@@ -558,13 +558,13 @@ def send_email_basic(to_email: str, download_url: str, doc_labels: list = None):
     if doc_labels is None:
         doc_labels = [d["label"] for d in COMPANY_DOCS_LIST]
     doc_rows = "".join(
-        f'<tr><td style="padding:4px 0;color:#1a1a1a;font-size:15px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {label}</td></tr>'
+        f'<tr><td style="padding:6px 0;color:#1a1a1a;font-size:16.5px;font-weight:500;line-height:1.6;">&#8226;&nbsp; {label}</td></tr>'
         for label in doc_labels
     )
-    body = f"""<tr><td style="padding:16px 36px 0;">
+    body = f"""<tr><td style="padding:18px 36px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fd;border-radius:10px;border-left:3px solid #003389;">
-        <tr><td style="padding:16px 20px 18px;">
-          <p style="font-size:11px;color:#003389;font-weight:700;letter-spacing:1.8px;margin:0 0 12px;text-transform:uppercase;">포함된 서류</p>
+        <tr><td style="padding:18px 22px 20px;">
+          <p style="font-size:13px;color:#003389;font-weight:700;letter-spacing:1px;margin:0 0 12px;">포함된 서류</p>
           <table width="100%" cellpadding="0" cellspacing="0">{doc_rows}</table>
         </td></tr>
       </table>
