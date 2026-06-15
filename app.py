@@ -424,7 +424,7 @@ def build_company_docs_html(server_base_url: str) -> str:
       <td style="padding:22px 36px 0;text-align:center;">
         <a href="{company_docs_zip_url}"
            style="display:inline-block;background:#e8ecf3;background-image:linear-gradient(135deg,#eef1f7 0%,#dbe1ec 100%);color:#1a3d86;text-decoration:none;font-size:15.5px;font-weight:700;padding:15px 42px;border-radius:10px;border:1px solid #d3dbe8;box-shadow:0 4px 12px rgba(60,80,130,.16);">
-          &#9660;&nbsp; 회사 기본서류 다운로드
+          &#9660;&nbsp; 기본서류 다운로드
         </a>
         <p style="font-size:13px;color:#8a93a3;margin:13px 0 0;line-height:1.7;">국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외 &middot; 홈페이지 최신본 자동 제공</p>
       </td>
