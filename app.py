@@ -423,7 +423,7 @@ def build_company_docs_html(server_base_url: str) -> str:
     <tr>
       <td style="padding:18px 36px 0;text-align:center;">
         <a href="{company_docs_zip_url}"
-           style="display:inline-block;background:#ffffff;color:#003389;text-decoration:none;font-size:15.5px;font-weight:700;padding:14px 36px;border-radius:9px;border:1.5px solid #cdd8ee;">
+           style="display:inline-block;background:#5d6573;background-image:linear-gradient(135deg,#5d6573 0%,#868f9e 100%);color:#ffffff;text-decoration:none;font-size:15.5px;font-weight:700;padding:15px 42px;border-radius:10px;box-shadow:0 5px 14px rgba(60,70,90,.26);">
           &#9660;&nbsp; 회사 기본서류 다운로드
         </a>
         <p style="font-size:13px;color:#8a93a3;margin:11px 0 0;line-height:1.7;">국세/지방세납세증명서 &middot; 사업자등록증 &middot; 공장등록증 외 &middot; 홈페이지 최신본 자동 제공</p>
@@ -503,11 +503,11 @@ def _email_shell(header_title: str, body_inner: str, download_url: str, btn_labe
 <body style="margin:0;padding:0;background:#eef1f6;font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:30px 0 46px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 26px rgba(16,38,76,.10);">
+      <table width="660" cellpadding="0" cellspacing="0" style="width:660px;max-width:660px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 26px rgba(16,38,76,.10);">
         <!-- 헤더 (로고 + 제목 통합) -->
-        <tr><td bgcolor="#001a4d" align="center" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:30px 36px 26px;text-align:center;">
+        <tr><td bgcolor="#001a4d" align="center" style="background:#001a4d;background-image:linear-gradient(135deg,#001a4d 0%,#1456c8 100%);padding:32px 36px 28px;text-align:center;">
           <img src="https://ssangkom.co.kr/img/hd_logo.png" alt="SSANGKOM" width="158" style="display:inline-block;border:0;outline:none;">
-          <p style="color:#cfe0ff;font-size:16.5px;font-weight:600;margin:14px 0 0;letter-spacing:.3px;">{header_title}</p>
+          <p style="color:#dbe8ff;font-size:19.5px;font-weight:700;margin:15px 0 0;letter-spacing:.2px;">{header_title}</p>
         </td></tr>
         <!-- 인사말 -->
         <tr><td style="padding:28px 36px 2px;">
