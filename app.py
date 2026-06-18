@@ -2455,6 +2455,18 @@ def health():
     })
 
 
+@app.route("/health/gmail")
+def health_gmail():
+    """메일 발송 인증 상태 점검(실제 발송 X, 토큰 갱신만 시도). 모니터링용."""
+    if not GOOGLE_REFRESH_TOKEN:
+        return jsonify({"gmail_auth": "skipped", "reason": "no refresh token (local SMTP mode)"})
+    try:
+        token = _get_gmail_access_token()
+        return jsonify({"gmail_auth": "ok", "has_access_token": bool(token)})
+    except Exception as e:
+        return jsonify({"gmail_auth": "fail", "error": str(e)[:200]}), 503
+
+
 if __name__ == "__main__":
     print(f"서버 시작 - 품목 {len(PRODUCT_NAMES)}개, 파일 {sum(len(v) for v in DOCUMENT_MAP.values())}개 로드됨")
     app.run(host="0.0.0.0", port=5000, debug=False)
