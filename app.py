@@ -8,6 +8,9 @@ import io
 import json
 import os
 import re
+import smtplib
+import socket
+import ssl
 import threading
 import urllib.parse
 import uuid
@@ -461,6 +464,24 @@ def _send_via_gmail_api(to_email: str, raw_msg_bytes: bytes):
     return resp.json()
 
 
+class _IPv4SMTPSSL(smtplib.SMTP_SSL):
+    """smtp.gmail.com에 IPv4로 접속하되 TLS 인증서는 호스트명으로 정상 검증.
+    (Render의 IPv6 SMTP 타임아웃 회피 + 인증서 검증 유지)"""
+
+    def _get_socket(self, host, port, timeout):
+        ipv4 = socket.getaddrinfo("smtp.gmail.com", port, socket.AF_INET)[0][4][0]
+        sock = socket.create_connection((ipv4, port), timeout, self.source_address)
+        return self.context.wrap_socket(sock, server_hostname="smtp.gmail.com")
+
+
+def _send_via_smtp(to_email: str, raw_msg_str: str):
+    """SMTP(앱 비밀번호) 발송. IPv4 강제 + 인증서 정상 검증."""
+    with _IPv4SMTPSSL("smtp.gmail.com", 465, timeout=15,
+                      context=ssl.create_default_context()) as s:
+        s.login(GMAIL_USER, GMAIL_PASSWORD)
+        s.sendmail(GMAIL_USER, to_email, raw_msg_str)
+
+
 def send_email(to_email: str, product_names: list[str], download_url: str):
     """품목별 전체 발송 메일 (공용 _email_shell 사용)."""
     rows = "".join(
@@ -488,11 +509,7 @@ def _send_mail(to_email: str, subject: str, html: str):
     if GOOGLE_REFRESH_TOKEN:
         _send_via_gmail_api(to_email, msg.as_bytes())
     else:
-        import smtplib, socket, ssl
-        ipv4 = socket.getaddrinfo("smtp.gmail.com", 465, socket.AF_INET)[0][4][0]
-        with smtplib.SMTP_SSL(ipv4, 465, timeout=15, context=ssl.create_default_context()) as s:
-            s.login(GMAIL_USER, GMAIL_PASSWORD)
-            s.sendmail(GMAIL_USER, to_email, msg.as_string())
+        _send_via_smtp(to_email, msg.as_string())
 
 
 def _email_shell(header_title: str, body_inner: str, download_url: str, btn_label: str,
