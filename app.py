@@ -939,6 +939,8 @@ def admin_logs():
     dochealth = (f'<div class="warn"><span>⚠️ 발송 시 누락되는 서류 <b>{broken_n}건</b>이 있습니다 '
                  f'(원본 접근 불가).</span><a href="/admin/docs-health?token={_esc(token)}">자세히 보기 →</a></div>'
                  if broken_n else "")
+    resent_banner = ('<div class="done">✅ 재발송을 접수했습니다. 잠시 후 새로고침하면 새 발송 건이 목록에 표시됩니다.</div>'
+                     if request.args.get("resent") else "")
 
     def badge(s):
         c = {"success": "#1a7f37", "partial": "#b7791f", "failed": "#dc2f3a", "처리중": "#888", "중단": "#dc2f3a"}.get(s, "#888")
@@ -959,6 +961,18 @@ def admin_logs():
             req_html = '<span class="retag">🔄 재전송</span>'
         else:
             req_html = _esc(req) or "<span class='dim'>직접요청</span>"
+        rid = x.get("id")
+        rmode = (x.get("payload") or {}).get("mode")
+        if rid and rmode in ("all", "specific", "basic"):
+            resend_btn = (
+                f'<form method="post" action="/admin/resend" style="margin:0" '
+                f"onsubmit=\"return confirm('동일 자료를 원래 수신처로 재발송할까요?')\">"
+                f'<input type="hidden" name="token" value="{_esc(token)}">'
+                f'<input type="hidden" name="id" value="{rid}">'
+                f'<button type="submit" class="rsbtn">🔄 재발송</button></form>'
+            )
+        else:
+            resend_btn = "<span class='dim'>-</span>"
         trs += (
             "<tr>"
             f"<td class='nowrap'>{ts}</td>"
@@ -970,10 +984,11 @@ def admin_logs():
             f"<td{warn}>{cnt}</td>"
             f"<td>{link_html}</td>"
             f"<td class='err'>{_esc(x.get('error'))}</td>"
+            f"<td class='nowrap'>{resend_btn}</td>"
             "</tr>"
         )
     if not rows:
-        trs = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999">기록이 없습니다</td></tr>'
+        trs = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999">기록이 없습니다</td></tr>'
 
     html = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -994,6 +1009,9 @@ tr:hover td{{background:#f9fbff}}
 .err{{max-width:200px;font-size:11px;color:#dc2f3a;word-break:break-all}}
 .retag{{background:#eef2fb;color:#003389;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap}}
 .dim{{color:#bbb}}
+.rsbtn{{background:#003389;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}}
+.rsbtn:hover{{background:#0046b8}} .rsbtn:active{{background:#002270}}
+.done{{background:#e8f6ec;border-left:4px solid #1a7f37;margin:14px 14px 0;padding:11px 16px;border-radius:8px;font-size:13px;color:#1a5c2a}}
 a{{color:#003389}}
 .refresh{{color:#fff;font-size:13px;text-decoration:none;background:rgba(255,255,255,.18);padding:6px 12px;border-radius:8px}}
 .srch{{margin-left:auto;display:flex;gap:6px}}
@@ -1015,17 +1033,51 @@ a{{color:#003389}}
     <a class="refresh" href="/admin/logs?token={_esc(token)}">전체</a>
   </form>
 </div>
-{dochealth}
+{dochealth}{resent_banner}
 <div class="wrap">
 <table>
 <thead><tr>
-<th>시각(KST)</th><th>상태</th><th>요청구분</th><th>이메일</th><th>모드</th><th>내용</th><th>파일(실/요청)</th><th>링크</th><th>오류</th>
+<th>시각(KST)</th><th>상태</th><th>요청구분</th><th>이메일</th><th>모드</th><th>내용</th><th>파일(실/요청)</th><th>링크</th><th>오류</th><th>재발송</th>
 </tr></thead>
 <tbody>{trs}</tbody>
 </table>
 </div>
 </body></html>"""
     return Response(html, mimetype="text/html; charset=utf-8")
+
+
+@app.route("/admin/resend", methods=["POST"])
+def admin_resend():
+    """관리자용: 발송 기록에서 동일 자료를 원래 수신처로 재발송 (ADMIN_TOKEN 필요)."""
+    token = request.form.get("token", "")
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return "unauthorized", 403
+    log_id = request.form.get("id", "")
+    back = f"/admin/logs?token={urllib.parse.quote(token)}"
+    if not (log_id.isdigit() and SUPABASE_URL and SUPABASE_KEY):
+        return redirect(back)
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/send_logs?select=email,payload&id=eq.{log_id}",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+            timeout=10,
+        )
+        rows = r.json() if r.status_code == 200 else []
+    except Exception as e:
+        print(f"[admin/resend 조회 실패] {e}")
+        rows = []
+    if not rows:
+        return redirect(back)
+    email = (rows[0].get("email") or "").strip()
+    payload = rows[0].get("payload") or {}
+    mode = payload.get("mode")
+    if email and mode in ("all", "specific", "basic"):
+        _dispatch_send(mode, [email], "재전송", "", _client_ip(),
+                       products=payload.get("products"),
+                       selections=payload.get("selections"),
+                       doc_indices=payload.get("doc_indices"))
+        return redirect(back + "&resent=1")
+    return redirect(back)
 
 
 @app.route("/admin/docs-health")
