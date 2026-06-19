@@ -47,12 +47,20 @@ auth_url = (
 )
 
 auth_code = None
+done = False
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        global auth_code
-        params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        global auth_code, done
+        parsed = urllib.parse.urlparse(self.path)
+        if not parsed.query:
+            # favicon 등 콜백이 아닌 요청은 무시
+            self.send_response(404)
+            self.end_headers()
+            return
+        params = urllib.parse.parse_qs(parsed.query)
         auth_code = params.get("code", [None])[0]
+        done = True
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"<h2>Authorization complete. You can close this window.</h2>")
@@ -65,7 +73,9 @@ print(f"URL: {auth_url}\n")
 webbrowser.open(auth_url)
 
 server = HTTPServer(("localhost", 8765), Handler)
-server.handle_request()
+print("localhost:8765 대기 중...")
+while not done:
+    server.handle_request()
 
 if not auth_code:
     print("Authorization code not received.")
