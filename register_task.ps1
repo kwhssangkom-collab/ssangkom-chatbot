@@ -1,4 +1,4 @@
-# 서류 자동갱신 예약작업 등록 (PC당 1회 실행 — 회사/재택 PC 모두 등록 권장)
+﻿# 서류 자동갱신 예약작업 등록 (PC당 1회 실행 — 회사/재택 PC 모두 등록 권장)
 #   powershell -ExecutionPolicy Bypass -File register_task.ps1
 $script = Join-Path $PSScriptRoot "refresh_and_push.ps1"
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$script`""
