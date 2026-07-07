@@ -145,8 +145,9 @@ def main():
     print("document_map.json 업데이트 완료")
 
     attempted = done - skip
-    if attempted and errors >= attempted:
-        # 전건 실패 = 접근 차단 환경(클라우드 IP 등). 조용히 성공 처리 금지.
+    # ponytail: attempted>1 기준 — 상시 접근불가 서류 1건(S-905, d=333)의 단독 실패는 통과,
+    # 차단 환경(전 건 수백 개 실패)만 잡는다. 상시 실패 서류가 늘면 임계값 재검토.
+    if errors and errors >= attempted and attempted > 1:
         sys.exit("시도한 전 건 실패 — 접근 차단 추정. 실패 처리합니다.")
     print("\n다음 명령 실행:")
     print('  git add product-docs document_map.json')
