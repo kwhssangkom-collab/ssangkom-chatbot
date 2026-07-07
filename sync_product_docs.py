@@ -89,6 +89,17 @@ def main():
                     errors += 1
                     continue
 
+                # 내용이 기존 캐시와 동일하면 유지 — 서버가 다운로드마다 새 파일명을
+                # 부여하는 서류(ZIP 등)의 무의미한 파일명 교체·커밋 오염 방지
+                old_fn = doc.get("filename")
+                if old_fn:
+                    old_path = os.path.join(folder_dir, safe_name(old_fn))
+                    if os.path.exists(old_path):
+                        with open(old_path, "rb") as f:
+                            if f.read() == resp.content:
+                                skip += 1
+                                continue
+
                 cd       = resp.headers.get("Content-Disposition", "")
                 filename = parse_cd_filename(cd)
                 if not filename:
@@ -115,8 +126,28 @@ def main():
     with open(MAP_PATH, "w", encoding="utf-8") as f:
         json.dump(doc_map, f, ensure_ascii=False, indent=2)
 
+    # 맵에서 참조하지 않는 캐시 파일 정리 — 서버가 매 다운로드마다 새 파일명을 주는
+    # 서류(ZIP 등)는 --force 재실행 시 구파일이 고아로 남아 저장소가 무한 증식한다.
+    referenced = {(safe_name(p), d["filename"]) for p, ds in doc_map.items() for d in ds if d.get("filename")}
+    removed = 0
+    for folder in os.listdir(OUTPUT_DIR):
+        fdir = os.path.join(OUTPUT_DIR, folder)
+        if not os.path.isdir(fdir):
+            continue
+        for fn in os.listdir(fdir):
+            if (folder, fn) not in referenced:
+                os.remove(os.path.join(fdir, fn))
+                removed += 1
+    if removed:
+        print(f"고아 캐시 파일 정리: {removed}건 삭제")
+
     print(f"\n완료: {done}건 처리 / {skip}건 스킵 / {errors}건 실패")
     print("document_map.json 업데이트 완료")
+
+    attempted = done - skip
+    if attempted and errors >= attempted:
+        # 전건 실패 = 접근 차단 환경(클라우드 IP 등). 조용히 성공 처리 금지.
+        sys.exit("시도한 전 건 실패 — 접근 차단 추정. 실패 처리합니다.")
     print("\n다음 명령 실행:")
     print('  git add product-docs document_map.json')
     print('  git commit -m "Add product docs cache (GitHub Raw serving)"')

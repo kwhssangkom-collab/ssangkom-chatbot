@@ -90,8 +90,10 @@ for doc in docs:
         print(f"  [FAIL] {doc['label']}: HTTP {r.status_code}")
 
 print(f"\n완료: {updated}개 갱신")
-if updated > 0:
-    print("\n다음 명령어로 GitHub에 반영하세요:")
-    print("  git add company-docs/")
-    print("  git commit -m 'chore: 회사 기본서류 갱신'")
-    print("  git push")
+if updated == 0:
+    # 0건 = 접근 차단·페이지 변경 추정. 조용히 성공 처리하면 구버전 발송이 방치되므로 실패로 종료.
+    sys.exit("갱신 0건 — 접근 차단 또는 페이지 구조 변경. 실패 처리합니다.")
+print("\n다음 명령어로 GitHub에 반영하세요:")
+print("  git add company-docs/")
+print("  git commit -m 'chore: 회사 기본서류 갱신'")
+print("  git push")

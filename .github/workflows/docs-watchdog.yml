@@ -1,41 +1,33 @@
-name: 회사기본서류 자동 갱신
+name: 서류 갱신 감시
+
+# ssangkom.co.kr이 클라우드 IP를 차단하므로 GitHub Actions에서 직접 갱신은 불가능하다
+# (과거 스크래핑 방식은 "발견 0건"으로 조용히 성공 처리되던 함정).
+# 실제 갱신 = 로컬 PC의 refresh_and_push.ps1(작업 스케줄러, 매주 월요일).
+# 이 워크플로는 하트비트(last_sync.txt)가 10일 넘게 갱신되지 않으면 실패 → 알림 메일.
 
 on:
   schedule:
-    # 매주 월요일 오전 9시 (KST = UTC+9, 즉 UTC 00:00)
-    - cron: '0 0 * * 1'
-  workflow_dispatch:  # 수동 실행 버튼
+    # 매주 화요일 오전 10시 KST (월요일 로컬 갱신 다음날 검사)
+    - cron: '0 1 * * 2'
+  workflow_dispatch:
 
 jobs:
-  refresh:
+  check:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
-      - name: 레포 체크아웃
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Python 설정
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: 의존성 설치
-        run: pip install requests beautifulsoup4
-
-      - name: 회사기본서류 다운로드
-        run: python refresh_company_docs.py
-
-      - name: 변경 사항 커밋
+      - name: 하트비트 검사 (10일 초과 시 실패)
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add company-docs/
-          if git diff --cached --quiet; then
-            echo "파일 변경 없음 - 커밋 스킵"
-          else
-            git commit -m "chore: 회사 기본서류 자동 갱신 [$(date '+%Y-%m-%d')]"
-            git push
-            echo "변경된 파일 push 완료"
+          if [ ! -f last_sync.txt ]; then
+            echo "::error::last_sync.txt 없음 — 로컬 자동 갱신이 아직 한 번도 실행되지 않았습니다."
+            exit 1
+          fi
+          last=$(head -c 16 last_sync.txt)
+          last_epoch=$(date -d "$last" +%s)
+          days=$(( ( $(date +%s) - last_epoch ) / 86400 ))
+          echo "마지막 서류 갱신: $last (${days}일 전)"
+          if [ "$days" -gt 10 ]; then
+            echo "::error::서류 갱신이 ${days}일째 없습니다. 로컬 PC의 '쌍곰 챗봇 서류 갱신' 예약 작업을 확인하세요 (PC 꺼짐/스크립트 오류 가능)."
+            exit 1
           fi
