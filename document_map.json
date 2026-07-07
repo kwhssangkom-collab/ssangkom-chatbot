@@ -95,8 +95,8 @@
     {
       "type": "성과대비표",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=403",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%ED%94%BD%EC%8A%A4%20PC-7000S%20TYPE%E2%85%A1/%EC%84%B1%EA%B3%BC%EB%8C%80%EB%B9%84%ED%91%9C%20-%20%EC%84%B8%EB%9D%BC%ED%94%BD%EC%8A%A4%20PC-7000S%20%282026%29.pdf",
-      "filename": "성과대비표 - 세라픽스 PC-7000S (2026).pdf"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%ED%94%BD%EC%8A%A4%20PC-7000S%20TYPE%E2%85%A1/%EC%84%B8%EB%9D%BC%ED%94%BD%EC%8A%A4%20PC-7000S%20%EC%84%B1%EA%B3%BC%EB%8C%80%EB%B9%84%ED%91%9C%20%2826.6.29%29.pdf",
+      "filename": "세라픽스 PC-7000S 성과대비표 (26.6.29).pdf"
     }
   ],
   "세라픽스 PC-9500F": [
@@ -1189,8 +1189,8 @@
     {
       "type": "시험성적서",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=316",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%88%98%EC%84%B1%EB%A0%88%EC%9D%B8%EC%94%B0/Q%EB%A7%88%ED%81%AC%20%EA%B2%80%EC%82%AC%20%EA%B2%B0%EA%B3%BC%EC%84%9C%20-%20%EC%88%98%EC%84%B1%EB%A0%88%EC%9D%B8%EC%94%B0.pdf",
-      "filename": "Q마크 검사 결과서 - 수성레인씰.pdf"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%88%98%EC%84%B1%EB%A0%88%EC%9D%B8%EC%94%B0/%ED%92%88%EC%A7%88%EC%9D%B8%EC%A6%9D%28Q-Mark%29%20%EA%B2%80%EC%82%AC%20%EA%B2%B0%EA%B3%BC%ED%86%B5%EB%B3%B4%EC%84%9C_%EB%B0%9C%EC%88%98%EC%A0%9C%2C%202026.01.07.pdf",
+      "filename": "품질인증(Q-Mark) 검사 결과통보서_발수제, 2026.01.07.pdf"
     },
     {
       "type": "성과대비표",
@@ -2135,8 +2135,8 @@
     {
       "type": "인증서",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=257",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%9E%90%EB%8F%99%EC%88%98%ED%8F%89%EB%AA%B0%ED%83%88%20SL-15%28%ED%9B%84%EB%8F%84%EC%9A%A9%29/HB%EC%9D%B8%EC%A6%9D%EC%84%9C%2C%20%EC%9E%90%EB%8F%99%EC%88%98%ED%8F%89%EB%AA%B0%ED%83%88%20SL-15%2C%202025.01.24~2028.01.23.pdf",
-      "filename": "HB인증서, 자동수평몰탈 SL-15, 2025.01.24~2028.01.23.pdf"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%9E%90%EB%8F%99%EC%88%98%ED%8F%89%EB%AA%B0%ED%83%88%20SL-15%28%ED%9B%84%EB%8F%84%EC%9A%A9%29/document_257_20260707_135430.zip",
+      "filename": "document_257_20260707_135430.zip"
     },
     {
       "type": "시험성적서",
