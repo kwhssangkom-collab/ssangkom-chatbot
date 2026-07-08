@@ -753,37 +753,6 @@ def alert_gateway():
     return jsonify({"ok": False, "error": "카카오·메일 모두 실패"}), 500
 
 
-@app.route("/admin/digest", methods=["POST"])
-def admin_digest():
-    """주간 운영 요약을 카카오톡으로 발송 (ALERT_TOKEN 인증, GitHub Actions 크론이 호출)."""
-    if not ALERT_TOKEN or request.headers.get("X-Alert-Token") != ALERT_TOKEN:
-        return jsonify({"error": "unauthorized"}), 401
-    since = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-    counts: dict = {}
-    try:
-        r = requests.get(
-            f"{SUPABASE_URL}/rest/v1/send_logs?select=status&created_at=gte.{since}",
-            headers=_sb_json_headers(), timeout=8)
-        for row in (r.json() if r.status_code == 200 else []):
-            s = row.get("status") or "?"
-            counts[s] = counts.get(s, 0) + 1
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-    total = sum(counts.values())
-    detail = " · ".join(f"{k} {v}" for k, v in sorted(counts.items())) or "없음"
-    try:
-        with open("last_sync.txt", encoding="ascii") as f:
-            last = f.read().strip()[:16]
-    except OSError:
-        last = "기록 없음"
-    text = (f"📊 쌍곰봇 주간 리포트\n"
-            f"최근 7일 발송 {total}건 ({detail})\n"
-            f"서류 갱신: {last}\n"
-            f"발송불가 서류: {UNAVAILABLE_DOCS}건")
-    ok = _kakao_alert(text)
-    return jsonify({"ok": ok, "total": total, "counts": counts})
-
-
 # ═══════════════════════════════════════════════════
 # 카카오 응답 헬퍼
 # ═══════════════════════════════════════════════════

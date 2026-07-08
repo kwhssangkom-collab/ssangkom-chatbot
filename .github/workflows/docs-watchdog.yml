@@ -32,12 +32,6 @@ jobs:
             exit 1
           fi
 
-      - name: 주간 운영 리포트 (카카오톡)
-        if: always()
-        run: |
-          curl -s -X POST https://ssangkom-chatbot.onrender.com/admin/digest \
-            -H "X-Alert-Token: ${{ secrets.ALERT_TOKEN }}" || true
-
       - name: 실패 시 카카오톡 알림
         if: failure()
         run: |
