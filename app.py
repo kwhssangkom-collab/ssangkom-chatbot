@@ -12,6 +12,7 @@ import smtplib
 import socket
 import ssl
 import threading
+import time
 import urllib.parse
 import uuid
 import zipfile
@@ -185,7 +186,14 @@ HEADERS = {
 
 # ── 품목 매핑 로드 ────────────────────────────────────
 with open("document_map.json", encoding="utf-8") as f:
-    DOCUMENT_MAP: dict = json.load(f)
+    _raw_map: dict = json.load(f)
+# 원본 접근불가로 미캐싱(github_url 없음)인 서류는 발송 대상에서 제외 —
+# 선택 UI 노출·집계·ZIP 다운로드 시도(항상 실패 → partial 경고 노이즈)를 로드 한 곳에서 차단.
+# 결손 현황은 UNAVAILABLE_DOCS로 /admin/docs-health 등에 계속 표시.
+UNAVAILABLE_DOCS = sum(1 for ds in _raw_map.values() for d in ds if not d.get("github_url"))
+DOCUMENT_MAP: dict = {p: [d for d in ds if d.get("github_url")]
+                      for p, ds in _raw_map.items()
+                      if any(d.get("github_url") for d in ds)}
 
 PRODUCT_NAMES = list(DOCUMENT_MAP.keys())
 
@@ -736,10 +744,44 @@ def alert_gateway():
     message = str(data.get("message", ""))[:1000]
     if not message:
         return jsonify({"error": "message required"}), 400
+    if data.get("level") == "info":  # 정보성 알림(갱신 성공 등): 카카오만, 메일 폴백 없음
+        ok = _kakao_alert(f"ℹ️ [{service}]\n{message}")
+        return jsonify({"ok": ok, "via": "kakao" if ok else None})
     via = _alert_admin(f"[{service}] 오류", message)
     if via:
         return jsonify({"ok": True, "via": via})
     return jsonify({"ok": False, "error": "카카오·메일 모두 실패"}), 500
+
+
+@app.route("/admin/digest", methods=["POST"])
+def admin_digest():
+    """주간 운영 요약을 카카오톡으로 발송 (ALERT_TOKEN 인증, GitHub Actions 크론이 호출)."""
+    if not ALERT_TOKEN or request.headers.get("X-Alert-Token") != ALERT_TOKEN:
+        return jsonify({"error": "unauthorized"}), 401
+    since = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    counts: dict = {}
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/rest/v1/send_logs?select=status&created_at=gte.{since}",
+            headers=_sb_json_headers(), timeout=8)
+        for row in (r.json() if r.status_code == 200 else []):
+            s = row.get("status") or "?"
+            counts[s] = counts.get(s, 0) + 1
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    total = sum(counts.values())
+    detail = " · ".join(f"{k} {v}" for k, v in sorted(counts.items())) or "없음"
+    try:
+        with open("last_sync.txt", encoding="ascii") as f:
+            last = f.read().strip()[:16]
+    except OSError:
+        last = "기록 없음"
+    text = (f"📊 쌍곰봇 주간 리포트\n"
+            f"최근 7일 발송 {total}건 ({detail})\n"
+            f"서류 갱신: {last}\n"
+            f"발송불가 서류: {UNAVAILABLE_DOCS}건")
+    ok = _kakao_alert(text)
+    return jsonify({"ok": ok, "total": total, "counts": counts})
 
 
 # ═══════════════════════════════════════════════════
@@ -1018,7 +1060,7 @@ def admin_logs():
     n_ok   = sum(1 for x in rows if x.get("status") == "success")
     n_part = sum(1 for x in rows if x.get("status") == "partial")
     n_fail = sum(1 for x in rows if x.get("status") == "failed")
-    broken_n = sum(1 for docs in DOCUMENT_MAP.values() for d in docs if not d.get("github_url"))
+    broken_n = UNAVAILABLE_DOCS
     dochealth = (f'<div class="warn"><span>⚠️ 발송 시 누락되는 서류 <b>{broken_n}건</b>이 있습니다 '
                  f'(원본 접근 불가).</span><a href="/admin/docs-health?token={_esc(token)}">자세히 보기 →</a></div>'
                  if broken_n else "")
@@ -1172,7 +1214,7 @@ def admin_docs_health():
 
     total = 0
     broken = {}   # product -> [types]
-    for product, docs in DOCUMENT_MAP.items():
+    for product, docs in _raw_map.items():  # 발송 대상에선 필터됐지만 점검 화면엔 결손 원본을 표시
         for d in docs:
             total += 1
             if not d.get("github_url"):
@@ -2080,21 +2122,31 @@ def _dispatch_send(mode, emails, requester, kakao, ip, *, products=None, selecti
 
     def worker():
         url = ""; actual = 0; build_err = ""
-        try:
-            url, actual = build()
-        except Exception as e:
-            build_err = str(e); print(f"[{mode} ZIP 오류] {e}")
+        for attempt in (1, 2):  # ZIP 생성 실패는 일시 오류(스토리지·네트워크)일 수 있어 1회 재시도
+            try:
+                url, actual = build()
+                build_err = ""
+                break
+            except Exception as e:
+                build_err = str(e); print(f"[{mode} ZIP 오류 {attempt}회] {e}")
+                if attempt == 1:
+                    time.sleep(5)
         for e, lid in zip(emails, log_ids):
             status = "success"; err = build_err
             if build_err:
                 status = "failed"
             else:
-                try:
-                    send_one(e, url)
-                    if actual < file_count:
-                        status = "partial"
-                except Exception as ex:
-                    status = "failed"; err = str(ex); print(f"[{mode} 발송 오류 {e}] {ex}")
+                for attempt in (1, 2, 3):  # 발송 일시 오류(토큰 갱신 직후·429 등) 백오프 재시도
+                    try:
+                        send_one(e, url)
+                        err = ""
+                        status = "partial" if actual < file_count else "success"
+                        break
+                    except Exception as ex:
+                        status = "failed"; err = str(ex)
+                        print(f"[{mode} 발송 오류 {attempt}회 {e}] {ex}")
+                        if attempt < 3:
+                            time.sleep(5 * attempt)
             _finish_send(lid, mode, e, requester, kakao, ip, summary, file_count, actual, status, url, err)
 
     threading.Thread(target=worker, daemon=True).start()

@@ -19,9 +19,28 @@ try {
     Get-Date -Format "yyyy-MM-dd HH:mm" | Set-Content last_sync.txt -Encoding ascii
 
     git add company-docs product-docs document_map.json last_sync.txt
+    # 커밋 전에 스테이징된 서류 변경분 캡처 (변경 없는 주에 이전 커밋으로 오판하지 않도록)
+    $changed = @(git diff --cached --name-only -- company-docs product-docs)
     git commit -m "chore: 서류 자동 갱신 [$(Get-Date -Format 'yyyy-MM-dd')]"
     git push origin master
     Write-Output "완료: 갱신분 push (Render 자동 반영)"
+
+    if ($changed.Count) {
+        # 갱신된 서류가 있으면 카카오톡으로 목록 통지 (정보성, 실패해도 무시)
+        try {
+            $tok = ((Get-Content .env -ErrorAction Stop) -match '^ALERT_TOKEN=' |
+                    Select-Object -First 1) -replace '^ALERT_TOKEN=', ''
+            if ($tok) {
+                $names = ($changed | ForEach-Object { [System.IO.Path]::GetFileName($_) } |
+                          Select-Object -First 5) -join ", "
+                $body = @{ service = "서류 갱신"; level = "info"
+                           message = "이번 주 갱신 $($changed.Count)건: $names" } | ConvertTo-Json
+                Invoke-RestMethod -Uri "https://ssangkom-chatbot.onrender.com/alert" -Method Post `
+                    -Headers @{ "X-Alert-Token" = $tok } -ContentType "application/json; charset=utf-8" `
+                    -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) | Out-Null
+            }
+        } catch { Write-Output "갱신 통지 실패(무시): $($_.Exception.Message)" }
+    }
 }
 catch {
     # 실패 시 알림 게이트웨이(카카오톡/메일)로 통지 — .env의 ALERT_TOKEN 사용

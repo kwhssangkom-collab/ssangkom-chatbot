@@ -1,0 +1,20 @@
+name: Render keep-alive
+
+# Render 유휴 슬립(재기동 30초+)은 카카오 웹훅 5초 타임아웃과 충돌 → 10분마다 핑으로 상시 워밍.
+# 앱이 죽으면 /alert 게이트웨이도 함께 죽으므로, 이 워크플로 실패(GitHub 알림 메일)가
+# 유일한 외부 다운 감시 채널이다.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: /health 핑 (비정상 시 실패 → GitHub 알림 메일)
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://ssangkom-chatbot.onrender.com/health)
+          echo "HTTP $code"
+          [ "$code" = "200" ]
