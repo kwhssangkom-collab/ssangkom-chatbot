@@ -23,6 +23,21 @@ try {
     git push origin master
     Write-Output "완료: 갱신분 push (Render 자동 반영)"
 }
+catch {
+    # 실패 시 알림 게이트웨이(카카오톡/메일)로 통지 — .env의 ALERT_TOKEN 사용
+    try {
+        $tok = ((Get-Content .env -ErrorAction Stop) -match '^ALERT_TOKEN=' |
+                Select-Object -First 1) -replace '^ALERT_TOKEN=', ''
+        if ($tok) {
+            $body = @{ service = "서류 자동 갱신(로컬)"; message = "$($_.Exception.Message)" } | ConvertTo-Json
+            Invoke-RestMethod -Uri "https://ssangkom-chatbot.onrender.com/alert" -Method Post `
+                -Headers @{ "X-Alert-Token" = $tok } -ContentType "application/json; charset=utf-8" `
+                -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) | Out-Null
+            Write-Output "알림 발송 완료"
+        }
+    } catch { Write-Output "알림 발송 실패: $($_.Exception.Message)" }
+    throw
+}
 finally {
     Stop-Transcript | Out-Null
 }

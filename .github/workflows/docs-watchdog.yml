@@ -31,3 +31,11 @@ jobs:
             echo "::error::서류 갱신이 ${days}일째 없습니다. 로컬 PC의 '쌍곰 챗봇 서류 갱신' 예약 작업을 확인하세요 (PC 꺼짐/스크립트 오류 가능)."
             exit 1
           fi
+
+      - name: 실패 시 카카오톡 알림
+        if: failure()
+        run: |
+          curl -s -X POST https://ssangkom-chatbot.onrender.com/alert \
+            -H "X-Alert-Token: ${{ secrets.ALERT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"service":"서류 갱신 감시","message":"하트비트 10일 초과 — 로컬 PC의 쌍곰 챗봇 서류 갱신 예약작업을 확인하세요."}' || true

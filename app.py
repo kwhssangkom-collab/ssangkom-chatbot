@@ -55,6 +55,11 @@ ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 # 발송 실패/부분발송 경고를 받을 관리자 이메일 (미설정 시 발송 계정으로)
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL") or os.getenv("GMAIL_USER")
 
+# 오류 알림 게이트웨이 (/alert) — 전 서비스 공용. 카카오톡 "나에게 보내기" 우선, 실패 시 메일 폴백.
+# 카카오 refresh token(~2개월 수명, 갱신 시 회전)은 Supabase kakao_tokens에 보관.
+ALERT_TOKEN = os.getenv("ALERT_TOKEN")                # 미설정 시 /alert 비활성 (fail-closed)
+KAKAO_REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")  # 미설정 시 카카오 생략, 메일만
+
 # 발송 남용 방지: IP 레이트리밋 + ZIP 동시 생성 제한(OOM 방지)
 RATE_PER_MIN  = int(os.getenv("RATE_PER_MIN", "5"))
 RATE_PER_HOUR = int(os.getenv("RATE_PER_HOUR", "30"))
@@ -645,18 +650,96 @@ def _update_log(log_id, fields):
         print(f"[send_logs update 실패] {e}")
 
 
+def _sb_json_headers():
+    return {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json", "Prefer": "return=minimal"}
+
+
+def _kakao_access_token() -> str:
+    """Supabase 보관 refresh token으로 access token 확보 (만료 시 갱신, 회전분 저장)."""
+    r = requests.get(
+        f"{SUPABASE_URL}/rest/v1/kakao_tokens?id=eq.1&select=refresh_token,access_token,access_expires",
+        headers=_sb_json_headers(), timeout=8)
+    rows = r.json() if r.status_code == 200 else []
+    if not rows:
+        raise RuntimeError("kakao_tokens 미설정 — get_kakao_token.py로 최초 발급 필요")
+    row = rows[0]
+    now = int(datetime.now(timezone.utc).timestamp())
+    if row.get("access_token") and (row.get("access_expires") or 0) > now + 60:
+        return row["access_token"]
+    tr = requests.post("https://kauth.kakao.com/oauth/token", data={
+        "grant_type": "refresh_token", "client_id": KAKAO_REST_API_KEY,
+        "refresh_token": row["refresh_token"]}, timeout=10)
+    tok = tr.json()
+    if "access_token" not in tok:
+        raise RuntimeError(f"카카오 토큰 갱신 실패: {str(tok)[:200]}")
+    patch = {"access_token": tok["access_token"],
+             "access_expires": now + int(tok.get("expires_in", 21600)),
+             "updated_at": datetime.now(timezone.utc).isoformat()}
+    if tok.get("refresh_token"):  # 만료 1개월 미만이면 카카오가 새 refresh token 발급
+        patch["refresh_token"] = tok["refresh_token"]
+    requests.patch(f"{SUPABASE_URL}/rest/v1/kakao_tokens?id=eq.1",
+                   headers=_sb_json_headers(), json=patch, timeout=8)
+    return tok["access_token"]
+
+
+def _kakao_alert(text: str) -> bool:
+    """카카오톡 '나에게 보내기'. 미설정·실패 시 False (호출부가 메일 폴백)."""
+    if not (KAKAO_REST_API_KEY and SUPABASE_URL and SUPABASE_KEY):
+        return False
+    try:
+        template = {"object_type": "text", "text": text[:200],
+                    "link": {"web_url": SERVER_BASE_URL}}
+        r = requests.post("https://kapi.kakao.com/v2/api/talk/memo/default/send",
+                          headers={"Authorization": f"Bearer {_kakao_access_token()}"},
+                          data={"template_object": json.dumps(template, ensure_ascii=False)},
+                          timeout=10)
+        if r.status_code != 200:
+            raise RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
+        return True
+    except Exception as e:
+        print(f"[카카오 알림 실패] {e}")
+        return False
+
+
 def _alert_admin(subject: str, body_text: str):
-    """발송 실패/부분발송 시 관리자에게 경고 메일."""
+    """관리자 경고: 카카오톡 우선, 실패 시 메일 폴백. 발송 채널명 또는 None 반환."""
+    if _kakao_alert(f"🚨 {subject}\n{body_text}"):
+        return "kakao"
     to = ADMIN_EMAIL
     if not to:
-        return
+        return None
     try:
         safe = body_text.replace("<", "&lt;").replace(">", "&gt;")
         html = (f"<div style='font-family:monospace;font-size:13px;line-height:1.7;"
                 f"white-space:pre-wrap;color:#222'>{safe}</div>")
         _send_mail(to, f"[쌍곰봇 경고] {subject}", html)
+        return "email"
     except Exception as e:
         print(f"[관리자 알림 실패] {e}")
+        return None
+
+
+@app.route("/alert", methods=["POST"])
+def alert_gateway():
+    """전 서비스 공용 오류 알림 수신 (ALERT_TOKEN 필요). {"ping":true}=카카오 토큰 keep-alive."""
+    if not ALERT_TOKEN or request.headers.get("X-Alert-Token") != ALERT_TOKEN:
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.get_json(silent=True) or {}
+    if data.get("ping"):
+        try:
+            _kakao_access_token()
+            return jsonify({"ok": True, "ping": "refreshed"})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+    service = str(data.get("service", "unknown"))[:50]
+    message = str(data.get("message", ""))[:1000]
+    if not message:
+        return jsonify({"error": "message required"}), 400
+    via = _alert_admin(f"[{service}] 오류", message)
+    if via:
+        return jsonify({"ok": True, "via": via})
+    return jsonify({"ok": False, "error": "카카오·메일 모두 실패"}), 500
 
 
 # ═══════════════════════════════════════════════════

@@ -21,3 +21,11 @@ jobs:
         run: python cleanup_supabase_zips.py
         env:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+      # 카카오 refresh token(~2개월 수명) 만료 방지 — 6시간마다 갱신 핑
+      - name: 카카오 토큰 keep-alive
+        if: always()
+        run: |
+          curl -s -X POST https://ssangkom-chatbot.onrender.com/alert \
+            -H "X-Alert-Token: ${{ secrets.ALERT_TOKEN }}" \
+            -H "Content-Type: application/json" -d '{"ping":true}' || true
