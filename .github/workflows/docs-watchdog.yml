@@ -3,7 +3,9 @@ name: 서류 갱신 감시
 # ssangkom.co.kr이 클라우드 IP를 차단하므로 GitHub Actions에서 직접 갱신은 불가능하다
 # (과거 스크래핑 방식은 "발견 0건"으로 조용히 성공 처리되던 함정).
 # 실제 갱신 = 로컬 PC의 refresh_and_push.ps1(작업 스케줄러, 매주 월요일).
-# 이 워크플로는 하트비트(last_sync.txt)가 10일 넘게 갱신되지 않으면 실패 → 알림 메일.
+# 이 워크플로는 하트비트(last_sync.txt)가 7일 넘게 갱신되지 않으면 실패 → 알림 메일.
+# 임계치 7일 근거: 정상이면 화요일 검사 시 하트비트 나이 1일, 월요일 1회 누락이면 8일.
+# 과거 10일 임계치는 1회 누락(8일)을 통과시켜 최장 15일간 미탐지였다(2026-07-27 사례).
 
 on:
   schedule:
@@ -17,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 하트비트 검사 (10일 초과 시 실패)
+      - name: 하트비트 검사 (7일 초과 시 실패)
         run: |
           if [ ! -f last_sync.txt ]; then
             echo "::error::last_sync.txt 없음 — 로컬 자동 갱신이 아직 한 번도 실행되지 않았습니다."
@@ -27,8 +29,8 @@ jobs:
           last_epoch=$(date -d "$last" +%s)
           days=$(( ( $(date +%s) - last_epoch ) / 86400 ))
           echo "마지막 서류 갱신: $last (${days}일 전)"
-          if [ "$days" -gt 10 ]; then
-            echo "::error::서류 갱신이 ${days}일째 없습니다. 로컬 PC의 '쌍곰 챗봇 서류 갱신' 예약 작업을 확인하세요 (PC 꺼짐/스크립트 오류 가능)."
+          if [ "$days" -gt 7 ]; then
+            echo "::error::서류 갱신이 ${days}일째 없습니다. 로컬 PC의 '쌍곰 챗봇 서류 갱신' 예약 작업을 확인하세요 (PC 꺼짐/강제 종료/스크립트 오류 가능). 작업 스케줄러의 '마지막 실행 결과'와 refresh_and_push.log를 함께 보세요."
             exit 1
           fi
 
@@ -38,4 +40,4 @@ jobs:
           curl -s -X POST https://ssangkom-chatbot.onrender.com/alert \
             -H "X-Alert-Token: ${{ secrets.ALERT_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"service":"서류 갱신 감시","message":"하트비트 10일 초과 — 로컬 PC의 쌍곰 챗봇 서류 갱신 예약작업을 확인하세요."}' || true
+            -d '{"service":"서류 갱신 감시","message":"하트비트 7일 초과 — 지난 주 서류 갱신이 누락됐습니다. 로컬 PC의 쌍곰 챗봇 서류 갱신 예약작업(마지막 실행 결과)을 확인하세요."}' || true

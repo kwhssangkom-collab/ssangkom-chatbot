@@ -51,6 +51,10 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_SERVICE_KEY") or
 SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "ssangkom-zips")
 LINK_TTL_SECONDS = 86400  # 24시간
 
+# 영업사원용 /status 조회 노출 기간. DB(send_logs)는 전량 보존하고 조회만 가린다
+# (관리자 /admin/logs는 제한 없이 전체 조회).
+STATUS_RETENTION_DAYS = int(os.getenv("STATUS_RETENTION_DAYS", "30"))
+
 # 관리자 엔드포인트 보호 (미설정 시 /admin/* 비활성 — fail-closed)
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 # 발송 실패/부분발송 경고를 받을 관리자 이메일 (미설정 시 발송 계정으로)
@@ -205,13 +209,39 @@ _GITHUB_RAW = "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-cha
 # ssangkom.co.kr은 클라우드 IP에 JS 챌린지를 적용하므로 직접 스크래핑 불가.
 # 회사 기본서류를 GitHub 레포에 보관하고 Raw URL로 서빙.
 # 파일 갱신 시: python refresh_company_docs.py 실행 후 git push.
-COMPANY_DOCS_LIST = [
-    {"label": "국세/지방세납세증명서", "url": f"{_GITHUB_RAW}/tax_certificate.pdf",       "ext": "pdf"},
-    {"label": "품질경영시스템인증서",   "url": f"{_GITHUB_RAW}/quality_certification.pdf", "ext": "pdf"},
-    {"label": "사업자등록증",           "url": f"{_GITHUB_RAW}/business_registration.jpg", "ext": "jpg"},
-    {"label": "공장등록증",             "url": f"{_GITHUB_RAW}/factory_registration.jpg",  "ext": "jpg"},
-    {"label": "납품실적서",             "url": f"{_GITHUB_RAW}/delivery_record.jpg",        "ext": "jpg"},
+
+# 확장자 정본은 company_docs.json(refresh_company_docs.py가 실제 내용으로 판별해 기록).
+# 하드코딩하면 홈페이지가 포맷을 교체할 때 'jpg 이름의 PDF'가 발송된다(2026-07-27 납품실적서).
+# 매니페스트가 없거나 깨졌으면 아래 기본값으로 폴백 — 순서는 doc_indices와 결합되므로 고정.
+_FALLBACK_COMPANY_DOCS = [
+    {"label": "국세/지방세납세증명서", "filename": "tax_certificate.pdf",       "ext": "pdf"},
+    {"label": "품질경영시스템인증서",   "filename": "quality_certification.pdf", "ext": "pdf"},
+    {"label": "사업자등록증",           "filename": "business_registration.jpg", "ext": "jpg"},
+    {"label": "공장등록증",             "filename": "factory_registration.jpg",  "ext": "jpg"},
+    {"label": "납품실적서",             "filename": "delivery_record.pdf",       "ext": "pdf"},
 ]
+
+
+def _load_company_docs() -> list[dict]:
+    entries = _FALLBACK_COMPANY_DOCS
+    try:
+        with open("company_docs.json", encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, list) and all(d.get("filename") and d.get("label") for d in loaded):
+            entries = loaded
+        else:
+            print("[company_docs.json 형식 이상] 기본값 사용")
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print(f"[company_docs.json 읽기 실패] {e} — 기본값 사용")
+    return [{"label": d["label"],
+             "url": f"{_GITHUB_RAW}/{urllib.parse.quote(d['filename'])}",
+             "ext": d.get("ext") or d["filename"].rsplit(".", 1)[-1]}
+            for d in entries]
+
+
+COMPANY_DOCS_LIST = _load_company_docs()
 
 
 def fetch_company_docs() -> list[dict]:
@@ -2268,6 +2298,12 @@ def _age_hours(ts: str):
         return None
 
 
+def _retention_filter() -> str:
+    """/status 조회 하한(PostgREST 필터). DB 삭제가 아니라 사용자 조회만 가린다."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=STATUS_RETENTION_DAYS)
+    return f"&created_at=gte.{urllib.parse.quote(cutoff.isoformat())}"
+
+
 def _eff_status(x: dict) -> str:
     """오래(10분+)된 '처리중'은 '중단'으로 간주(서버 재시작 등으로 미완료)."""
     if x.get("status") == "처리중":
@@ -2294,8 +2330,10 @@ def status_resend():
         if not okd:
             return redirect(base + "&err=1")
     try:
+        # 조회에서 가린 1개월 경과분은 재전송도 불가(직접 POST 방어). 관리자 재발송은 제한 없음.
         r = requests.get(
-            f"{SUPABASE_URL}/rest/v1/send_logs?select=email,payload&id=eq.{log_id}",
+            f"{SUPABASE_URL}/rest/v1/send_logs?select=email,payload&id=eq.{log_id}"
+            f"{_retention_filter()}",
             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
             timeout=10,
         )
@@ -2328,7 +2366,8 @@ def status_page():
         try:
             q = urllib.parse.quote(email)
             r = requests.get(
-                f"{SUPABASE_URL}/rest/v1/send_logs?select=*&email=eq.{q}&order=created_at.desc&limit=20",
+                f"{SUPABASE_URL}/rest/v1/send_logs?select=*&email=eq.{q}"
+                f"{_retention_filter()}&order=created_at.desc&limit=20",
                 headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
                 timeout=10,
             )
@@ -2392,11 +2431,11 @@ def status_page():
             '</div>'
         )
     if searched and not rows:
-        cards = ('<div class="empty">해당 이메일로 접수된 <b>발송 요청이 없습니다.</b><br>'
+        cards = (f'<div class="empty">해당 이메일로 <b>최근 {STATUS_RETENTION_DAYS}일 내 접수된 발송 요청이 없습니다.</b><br>'
                  '수신 이메일이 정확한지 확인해 주세요.</div>')
 
-    intro = "" if searched else ('<div class="empty"><b>수신 이메일</b>을 입력하면<br>'
-                                 '요청이 정상 처리됐는지(발송 완료 여부)와 재전송을 진행할 수 있습니다.</div>')
+    intro = "" if searched else (f'<div class="empty"><b>수신 이메일</b>을 입력하면<br>'
+                                 f'최근 {STATUS_RETENTION_DAYS}일간의 처리 결과(발송 완료 여부)와 재전송을 진행할 수 있습니다.</div>')
     banner = ""
     if resent:
         banner = '<div class="banner">✅ 재전송을 접수했습니다. 잠시 후 목록을 새로고침하면 새 발송 건이 표시됩니다.</div>'
@@ -2459,7 +2498,8 @@ body{{font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
 </div>
 {banner}
 <div class="list">{intro}{cards}</div>
-<div class="note">※ 다운로드 링크는 발송 후 24시간 동안 유효합니다. 만료 시 ‘재전송’으로 다시 보낼 수 있습니다.</div>
+<div class="note">※ 다운로드 링크는 발송 후 24시간 동안 유효합니다. 만료 시 ‘재전송’으로 다시 보낼 수 있습니다.<br>
+※ 조회 가능 기간은 <b>최근 {STATUS_RETENTION_DAYS}일</b>입니다. 이전 요청은 새로 요청해 주세요.</div>
 <script>
 function pickSDomain() {{
   var sel = document.getElementById('sdomain'), inp = document.getElementById('semail');

@@ -1,0 +1,32 @@
+[
+  {
+    "label": "국세/지방세납세증명서",
+    "basename": "tax_certificate",
+    "ext": "pdf",
+    "filename": "tax_certificate.pdf"
+  },
+  {
+    "label": "품질경영시스템인증서",
+    "basename": "quality_certification",
+    "ext": "pdf",
+    "filename": "quality_certification.pdf"
+  },
+  {
+    "label": "사업자등록증",
+    "basename": "business_registration",
+    "ext": "jpg",
+    "filename": "business_registration.jpg"
+  },
+  {
+    "label": "공장등록증",
+    "basename": "factory_registration",
+    "ext": "jpg",
+    "filename": "factory_registration.jpg"
+  },
+  {
+    "label": "납품실적서",
+    "basename": "delivery_record",
+    "ext": "pdf",
+    "filename": "delivery_record.pdf"
+  }
+]

@@ -10,10 +10,12 @@ Start-Transcript -Path $log -Force | Out-Null
 try {
     git pull --rebase origin master
 
-    py -3 refresh_company_docs.py
+    # -u(무버퍼) 필수: 파이썬 stdout이 파이프에서 블록 버퍼링되면 실행이 강제 종료될 때
+    # 진행 로그가 버퍼째 유실돼 어디서 죽었는지 알 수 없다(2026-07-27 사례).
+    py -3 -u refresh_company_docs.py
     if ($LASTEXITCODE -ne 0) { throw "회사 기본서류 갱신 실패 (exit $LASTEXITCODE)" }
 
-    py -3 sync_product_docs.py --force
+    py -3 -u sync_product_docs.py --force
     if ($LASTEXITCODE -ne 0) { throw "제품 승인서류 동기화 실패 (exit $LASTEXITCODE)" }
 
     Get-Date -Format "yyyy-MM-dd HH:mm" | Set-Content last_sync.txt -Encoding ascii
