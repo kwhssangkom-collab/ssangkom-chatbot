@@ -1,5 +1,9 @@
-﻿# 서류 자동갱신 예약작업 등록 (PC당 1회 실행 — 회사/재택 PC 모두 등록 권장)
+﻿# 서류 자동갱신 예약작업 등록
 #   powershell -ExecutionPolicy Bypass -File register_task.ps1
+#
+# ⚠️ PC 1대에만 등록할 것(현재 회사 PC). 2대에 등록하면 같은 시각에 둘 다 돌아서
+# 먼저 push한 쪽만 성공하고 나머지는 non-fast-forward로 실패 → 오알림이 뜬다.
+# 다른 PC로 옮길 때는 기존 PC에서 Unregister-ScheduledTask로 먼저 해제한다.
 #
 # 작업 2개를 등록한다.
 #   [일간]  매일 09:00 — 기본서류 전량 + 제품서류 HEAD 크기비교 후 변경분만 수신(대역폭 ~0)
