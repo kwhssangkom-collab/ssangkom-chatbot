@@ -21,7 +21,12 @@ function Invoke-Git {
 }
 
 try {
-    Invoke-Git pull --rebase origin master
+    # --autostash 필수: 이 스크립트는 서류를 작업트리에 직접 받은 뒤 커밋한다. 다운로드 후
+    # 커밋 전에 실행이 끊기면(2026-08-03 09:00 예약작업이 0xC000013A로 강제 종료) 수정된 서류가
+    # 그대로 남고, 다음 실행부터 이 pull이 "cannot pull with rebase: You have unstaged changes"로
+    # exit 128 낸다 — 사람이 손대기 전까지 매 실행이 영구 실패한다.
+    # autostash가 남은 변경을 치웠다 되돌려 놓으므로, 끊긴 실행분은 다음 실행이 그대로 커밋한다.
+    Invoke-Git pull --rebase --autostash origin master
 
     # -u(무버퍼) 필수: 파이썬 stdout이 파이프에서 블록 버퍼링되면 실행이 강제 종료될 때
     # 진행 로그가 버퍼째 유실돼 어디서 죽었는지 알 수 없다(2026-07-27 사례).
