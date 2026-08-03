@@ -16,9 +16,18 @@ $base   = "-NoProfile -ExecutionPolicy Bypass -File `"$script`""
 # ExecutionTimeLimit 4h: 제한이 1시간이던 2026-07-27 실행이 절전/배터리로 멈춘 채 월클록이
 # 흘러 강제 종료(0xC000013A)됐고, 강제 종료는 ps1의 catch를 타지 않아 알림도 못 나갔다.
 # 배터리 옵션 해제: 전원 상태 때문에 실행이 조용히 차단/중단되는 경로를 없앤다.
+#
+# StopOnIdleEnd 해제(2026-08-03): 위 두 조치 뒤에도 0xC000013A가 재발했다. New-ScheduledTaskSettingsSet
+# 기본값이 StopOnIdleEnd=True 라 "컴퓨터가 유휴가 아니게 되면" 실행 중인 작업을 죽인다. 트리거가
+# 09:00 — 출근해 PC를 만지는 시각이라 8/3 실행은 6초 만에 killed 됐다(09:00:01 시작 / PDF 수신
+# 09:00:07 직후 종료). RunOnlyIfIdle=False 여도 이 설정은 독립적으로 동작한다.
+$idle = New-ScheduledTaskSettingsSet | Select-Object -ExpandProperty IdleSettings
+$idle.StopOnIdleEnd = $false
+$idle.RestartOnIdle = $false
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable `
     -ExecutionTimeLimit (New-TimeSpan -Hours 4) `
     -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$settings.IdleSettings = $idle
 
 Register-ScheduledTask -TaskName "쌍곰 챗봇 서류 갱신" `
     -Action (New-ScheduledTaskAction -Execute "powershell.exe" -Argument $base) `
