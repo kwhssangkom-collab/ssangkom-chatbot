@@ -912,14 +912,48 @@ def webhook():
 # 회사 기본서류 ZIP 다운로드 (실시간 생성)
 # ═══════════════════════════════════════════════════
 
+# 거래처가 반복 클릭해도 경고는 시간당 1회 (알림 폭주 방지).
+_COMPANY_ZIP_ALERT_AT = 0.0
+_COMPANY_ZIP_ALERT_INTERVAL = 3600
+
+
+def _alert_company_zip_gap(added: int, total: int, failed: list[str]):
+    """기본서류 ZIP 누락 경고. create_basic_zip의 partial 판정에 대응하는 버튼 경로용."""
+    global _COMPANY_ZIP_ALERT_AT
+    now = time.time()
+    if now - _COMPANY_ZIP_ALERT_AT < _COMPANY_ZIP_ALERT_INTERVAL:
+        print(f"[기본서류 ZIP 누락 {total - added}/{total}] 알림 스로틀 중 — {failed}")
+        return
+    _COMPANY_ZIP_ALERT_AT = now
+    scope = "전량 실패" if added == 0 else f"부분 누락 ({added}/{total}건만 포함)"
+    _alert_admin(
+        f"기본서류 다운로드 {scope}",
+        "이메일의 '기본서류 다운로드' 버튼이 파일을 다 채우지 못했습니다.\n"
+        f"성공 {added}건 / 대상 {total}건\n\n"
+        "실패 목록:\n  - " + "\n  - ".join(failed) + "\n\n"
+        "원인 후보:\n"
+        "  1) GitHub Raw 일시 장애\n"
+        "  2) company_docs.json의 파일명과 저장소 실제 파일 불일치 "
+        "— refresh_company_docs.py 실행 후 push가 됐는지, Render 재배포가 끝났는지 확인\n"
+        "  3) 저장소가 private으로 바뀜 (raw URL은 public 전제)"
+    )
+
+
 @app.route("/download-company-docs")
 def download_company_docs():
-    """회사 기본서류를 홈페이지에서 실시간 수집 후 ZIP으로 반환"""
+    """이메일의 '기본서류 다운로드' 버튼 — GitHub Raw 캐시본을 즉석 ZIP으로 반환.
+
+    create_basic_zip과 달리 _dispatch_send를 거치지 않아 partial 판정·send_logs가 없다.
+    2026-08-07 이전에는 개별 실패를 print만 하고 빈 ZIP을 200으로 내려보내
+    거래처도 우리도 누락을 알 수 없었다. 누락 감지를 여기서 직접 한다.
+    """
     docs = fetch_company_docs()
     if not docs:
         return "서류를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.", 503
 
     zip_buffer = io.BytesIO()
+    added = 0
+    failed: list[str] = []
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for doc in docs:
             try:
@@ -928,8 +962,19 @@ def download_company_docs():
                     ext = doc["url"].split(".")[-1].lower()
                     filename = f"{doc['label']}.{ext}"
                     zf.writestr(filename, resp.content)
+                    added += 1
+                else:
+                    failed.append(f"{doc['label']} — HTTP {resp.status_code}")
             except Exception as e:
+                failed.append(f"{doc['label']} — {e}")
                 print(f"회사서류 다운로드 실패: {doc['url']} - {e}")
+
+    if failed:
+        _alert_company_zip_gap(added, len(docs), failed)
+
+    # 빈 ZIP을 정상 다운로드로 위장해 내려보내지 않는다 — 거래처가 알아챌 방법이 없다.
+    if added == 0:
+        return "서류를 불러오지 못했습니다. 담당 영업사원에게 문의해 주세요.", 503
 
     zip_buffer.seek(0)
     return send_file(
