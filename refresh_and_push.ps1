@@ -33,6 +33,15 @@ try {
     py -3 -u refresh_company_docs.py
     if ($LASTEXITCODE -ne 0) { throw "회사 기본서류 갱신 실패 (exit $LASTEXITCODE)" }
 
+    # 자료실 목록 갱신 — sync는 "기존 항목이 바뀌었나"만 보므로, 이 단계가 없으면
+    # 홈페이지에 새 서류가 올라와도 영원히 들어오지 않는다. 실제로 신제품 5종
+    # (마스터씰·데코본드 친환경·스피드레벨·BL-40S·에폭시 라인 줄눈) 31건이 이렇게 빠져 있었다(2026-08-08).
+    # sync보다 앞에 둬야 신규분의 github_url이 같은 실행에서 채워져 한 커밋으로 나간다 —
+    # 순서가 바뀌면 github_url 없는 항목이 운영에 노출되고 app.py가 그 제품을 목록에서 감춘다.
+    # --prune은 넣지 않는다: 제품명 변경으로 구 품목이 사라지는 일이라 사람이 판단한다.
+    py -3 -u scraper.py
+    if ($LASTEXITCODE -ne 0) { throw "자료실 목록 갱신 실패 (exit $LASTEXITCODE)" }
+
     $syncMode = if ($Full) { "--force" } else { "--check" }
     Write-Output "제품 승인서류 동기화 모드: $syncMode"
     py -3 -u sync_product_docs.py $syncMode
