@@ -51,7 +51,11 @@ try {
 
     Invoke-Git add company-docs company_docs.json product-docs document_map.json last_sync.txt
     # 커밋 전에 스테이징된 서류 변경분 캡처 (변경 없는 날에 이전 커밋으로 오판하지 않도록)
-    $changed = @(git diff --cached --name-only -- company-docs product-docs)
+    #  -c core.quotepath=false 필수 — 기본값이면 git 이 한글 경로를 **따옴표로 감싼 8진 이스케이프**로
+    #  내보낸다("product-docs/\354\227\220..."). 그 따옴표가 Windows 경로 금지문자라 아래 통지의
+    #  GetFileName 이 "경로에 잘못된 문자가 있습니다"로 던졌다 — 2026-08-13 갱신분 통지가 통째로
+    #  실패했고, catch 가 무시하도록 돼 있어 **사용자에게는 아무 표시도 없었다**(2026-08-14 확인).
+    $changed = @(git -c core.quotepath=false diff --cached --name-only -- company-docs product-docs)
     # last_sync.txt가 매 실행 바뀌므로 커밋할 것은 항상 있다 — 실패하면 진짜 오류다.
     Invoke-Git commit -m "chore: 서류 자동 갱신 [$(Get-Date -Format 'yyyy-MM-dd')] $syncMode"
     Invoke-Git push origin master
@@ -63,7 +67,10 @@ try {
             $tok = ((Get-Content .env -ErrorAction Stop) -match '^ALERT_TOKEN=' |
                     Select-Object -First 1) -replace '^ALERT_TOKEN=', ''
             if ($tok) {
-                $names = ($changed | ForEach-Object { [System.IO.Path]::GetFileName($_) } |
+                #  파일명만 뽑는 데 [System.IO.Path]::GetFileName 을 쓰지 않는다 — git 출력에는
+                #  따옴표 같은 경로 금지문자가 섞일 수 있고, 그러면 **통지 전체가 예외로 죽는다**.
+                #  단순 문자열 분리는 어떤 입력에도 던지지 않는다(통지는 부가 기능이지 실패 지점이 아니다).
+                $names = ($changed | ForEach-Object { ($_ -split '/')[-1].Trim('"') } |
                           Select-Object -First 5) -join ", "
                 $body = @{ service = "서류 갱신"; level = "info"
                            message = "서류 갱신 $($changed.Count)건: $names" } | ConvertTo-Json
