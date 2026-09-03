@@ -1145,8 +1145,8 @@
     {
       "type": "MSDS",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=99",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EA%B8%89%EA%B2%B0%EB%B0%94%EB%A5%B4%EB%8B%A4/%EA%B8%89%EA%B2%B0%EB%B0%94%EB%A5%B4%EB%8B%A4.pdf",
-      "filename": "급결바르다.pdf"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EA%B8%89%EA%B2%B0%EB%B0%94%EB%A5%B4%EB%8B%A4/%EA%B8%89%EA%B2%B0%EB%B0%94%EB%A5%B4%EB%8B%A4%20MSDS.pdf",
+      "filename": "급결바르다 MSDS.pdf"
     },
     {
       "type": "기술자료",
