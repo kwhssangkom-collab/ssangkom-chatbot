@@ -2759,6 +2759,14 @@
       "filename": "MASTERSEAL 기술자료.pdf"
     }
   ],
+  "마스터씰(무광)": [
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=516",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%A7%88%EC%8A%A4%ED%84%B0%EC%94%B0%28%EB%AC%B4%EA%B4%91%29/MASTER%20SEAL%20MATTE%20%EA%B8%B0%EC%88%A0%EC%9E%90%EB%A3%8C.pdf",
+      "filename": "MASTER SEAL MATTE 기술자료.pdf"
+    }
+  ],
   "무수축 그라우트 SK-400": [
     {
       "type": "MSDS",
@@ -2857,6 +2865,20 @@
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=512",
       "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%97%90%ED%8F%AD%EC%8B%9C%20%EB%9D%BC%EC%9D%B8%20%EC%A4%84%EB%88%88/%EC%97%90%ED%8F%AD%EC%8B%9C%EB%9D%BC%EC%9D%B8%EC%A4%84%EB%88%88-%EA%B8%B0%EC%88%A0.pdf",
       "filename": "에폭시라인줄눈-기술.pdf"
+    }
+  ],
+  "에폭시퍼티700": [
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=517",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%97%90%ED%8F%AD%EC%8B%9C%ED%8D%BC%ED%8B%B0700/%EC%97%90%ED%8F%AD%EC%8B%9C%ED%8D%BC%ED%8B%B0700%20TDS.pdf",
+      "filename": "에폭시퍼티700 TDS.pdf"
+    },
+    {
+      "type": "MSDS",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=518",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%97%90%ED%8F%AD%EC%8B%9C%ED%8D%BC%ED%8B%B0700/%EC%97%90%ED%8F%AD%EC%8B%9C%ED%8D%BC%ED%8B%B0700%28MSDS%29.pdf",
+      "filename": "에폭시퍼티700(MSDS).pdf"
     }
   ],
   "자동수평 프라이머": [
