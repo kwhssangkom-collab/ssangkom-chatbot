@@ -20,8 +20,8 @@
   {
     "label": "공장등록증",
     "basename": "factory_registration",
-    "ext": "jpg",
-    "filename": "factory_registration.jpg"
+    "ext": "pdf",
+    "filename": "factory_registration.pdf"
   },
   {
     "label": "납품실적서",
