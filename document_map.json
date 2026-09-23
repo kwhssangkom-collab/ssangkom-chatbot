@@ -2483,6 +2483,14 @@
       "filename": "성과대비표 - 방수몰코트 (2026).pdf"
     }
   ],
+  "다용도 프라이머": [
+    {
+      "type": "MSDS",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=521",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%8B%A4%EC%9A%A9%EB%8F%84%20%ED%94%84%EB%9D%BC%EC%9D%B4%EB%A8%B8/%EB%8B%A4%EC%9A%A9%EB%8F%84%ED%94%84%EB%9D%BC%EC%9D%B4%EB%A8%B8%20MSDS.pdf",
+      "filename": "다용도프라이머 MSDS.pdf"
+    }
+  ],
   "쌍곰 원스톱방수": [
     {
       "type": "기술자료",
