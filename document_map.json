@@ -1565,8 +1565,14 @@
     {
       "type": "시험성적서",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=296",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20ALC%EC%88%98%EC%A7%80%EB%AA%B0%ED%83%88%28%EB%AF%B8%EC%9E%A5%EC%9A%A9%29/document_296_20260611_112524.zip",
-      "filename": "document_296_20260611_112524.zip"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20ALC%EC%88%98%EC%A7%80%EB%AA%B0%ED%83%88%28%EB%AF%B8%EC%9E%A5%EC%9A%A9%29/%EC%8C%8D%EA%B3%B0%20ALC%20%EC%88%98%EC%A7%80%EB%AA%B0%ED%83%88%28%EB%AF%B8%EC%9E%A5%EC%9A%A9%29%20%EC%8B%9C%ED%97%98%EC%84%B1%EC%A0%81%EC%84%9C%202026.09.21-2026.09.20.pdf",
+      "filename": "쌍곰 ALC 수지몰탈(미장용) 시험성적서 2026.09.21-2026.09.20.pdf"
+    },
+    {
+      "type": "성과대비표",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=522",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20ALC%EC%88%98%EC%A7%80%EB%AA%B0%ED%83%88%28%EB%AF%B8%EC%9E%A5%EC%9A%A9%29/26%EB%85%84%EB%8F%84%20%EC%84%B1%EA%B3%BC%EB%8C%80%EB%B9%84%ED%91%9C%28%EC%8C%8D%EA%B3%B0%20ALC%20%EC%88%98%EC%A7%80%EB%AA%B0%ED%83%88%20%EB%AF%B8%EC%9E%A5%EC%9A%A9%29.pdf",
+      "filename": "26년도 성과대비표(쌍곰 ALC 수지몰탈 미장용).pdf"
     }
   ],
   "쌍곰 ALC수지몰탈(조적용)": [
