@@ -2651,29 +2651,29 @@
       "filename": "퍼펙트씰 기술자료(2024.01.12).pdf"
     }
   ],
-  "퍼펙트탄": [
+  "세라우레탄": [
     {
       "type": "기술자료",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=475",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84-%EA%B8%B0%EC%88%A0%20%282024.11.26%29.pdf",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EC%9A%B0%EB%A0%88%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84-%EA%B8%B0%EC%88%A0%20%282024.11.26%29.pdf",
       "filename": "퍼펙트탄-기술 (2024.11.26).pdf"
     },
     {
       "type": "MSDS",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=478",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84MSDS.pdf",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EC%9A%B0%EB%A0%88%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84MSDS.pdf",
       "filename": "퍼펙트탄MSDS.pdf"
     },
     {
       "type": "시험성적서",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=483",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/%EC%8B%9C%ED%97%98%EC%84%B1%EC%A0%81%EC%84%9C%20-%20%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84%20%282026%29.pdf",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EC%9A%B0%EB%A0%88%ED%83%84/%EC%8B%9C%ED%97%98%EC%84%B1%EC%A0%81%EC%84%9C%20-%20%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84%20%282026%29.pdf",
       "filename": "시험성적서 - 퍼펙트탄 (2026).pdf"
     },
     {
       "type": "인증서",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=485",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84%20%ED%99%98%EA%B2%BD%ED%91%9C%EC%A7%80%20%EC%9D%B8%EC%A6%9D%EC%84%9C%282024.10.21~2027.10.20%29.pdf",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EC%9A%B0%EB%A0%88%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84%20%ED%99%98%EA%B2%BD%ED%91%9C%EC%A7%80%20%EC%9D%B8%EC%A6%9D%EC%84%9C%282024.10.21~2027.10.20%29.pdf",
       "filename": "퍼펙트탄 환경표지 인증서(2024.10.21~2027.10.20).pdf"
     }
   ],
@@ -2905,6 +2905,32 @@
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=518",
       "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%97%90%ED%8F%AD%EC%8B%9C%ED%8D%BC%ED%8B%B0700/%EC%97%90%ED%8F%AD%EC%8B%9C%ED%8D%BC%ED%8B%B0700%28MSDS%29.pdf",
       "filename": "에폭시퍼티700(MSDS).pdf"
+    }
+  ],
+  "퍼펙트탄": [
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=475",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84-%EA%B8%B0%EC%88%A0%20%282024.11.26%29.pdf",
+      "filename": "퍼펙트탄-기술 (2024.11.26).pdf"
+    },
+    {
+      "type": "MSDS",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=478",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84MSDS.pdf",
+      "filename": "퍼펙트탄MSDS.pdf"
+    },
+    {
+      "type": "시험성적서",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=483",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/%EC%8B%9C%ED%97%98%EC%84%B1%EC%A0%81%EC%84%9C%20-%20%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84%20%282026%29.pdf",
+      "filename": "시험성적서 - 퍼펙트탄 (2026).pdf"
+    },
+    {
+      "type": "인증서",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=485",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84%20%ED%99%98%EA%B2%BD%ED%91%9C%EC%A7%80%20%EC%9D%B8%EC%A6%9D%EC%84%9C%282024.10.21~2027.10.20%29.pdf",
+      "filename": "퍼펙트탄 환경표지 인증서(2024.10.21~2027.10.20).pdf"
     }
   ],
   "자동수평 프라이머": [
