@@ -2907,6 +2907,26 @@
       "filename": "에폭시퍼티700(MSDS).pdf"
     }
   ],
+  "도배용 아크릴실란트 AS-903": [
+    {
+      "type": "인증서",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=523",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%8F%84%EB%B0%B0%EC%9A%A9%20%EC%95%84%ED%81%AC%EB%A6%B4%EC%8B%A4%EB%9E%80%ED%8A%B8%20AS-903/document_523_20261009_090346.zip",
+      "filename": "document_523_20261009_090346.zip"
+    },
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=524",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%8F%84%EB%B0%B0%EC%9A%A9%20%EC%95%84%ED%81%AC%EB%A6%B4%EC%8B%A4%EB%9E%80%ED%8A%B8%20AS-903/AS-903%20%EA%B8%B0%EC%88%A0%EC%9E%90%EB%A3%8C.pdf",
+      "filename": "AS-903 기술자료.pdf"
+    },
+    {
+      "type": "MSDS",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=525",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%8F%84%EB%B0%B0%EC%9A%A9%20%EC%95%84%ED%81%AC%EB%A6%B4%EC%8B%A4%EB%9E%80%ED%8A%B8%20AS-903/AS-903%20MSDS%2C%202026.01.28.pdf",
+      "filename": "AS-903 MSDS, 2026.01.28.pdf"
+    }
+  ],
   "퍼펙트탄": [
     {
       "type": "기술자료",
