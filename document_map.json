@@ -2672,9 +2672,15 @@
     },
     {
       "type": "인증서",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=526",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EC%9A%B0%EB%A0%88%ED%83%84/%5B%EC%9D%8C%EC%84%B1%EA%B3%B5%EC%9E%A5%5D%20%ED%99%98%EA%B2%BD%ED%91%9C%EC%A7%80%20%EC%9D%B8%EC%A6%9D%EC%84%9C%20%EC%84%B8%EB%9D%BC%EC%9A%B0%EB%A0%88%ED%83%84%202024.10.21~2027.10.20.pdf",
+      "filename": "[음성공장] 환경표지 인증서 세라우레탄 2024.10.21~2027.10.20.pdf"
+    },
+    {
+      "type": "인증서",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=485",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EC%9A%B0%EB%A0%88%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84%20%ED%99%98%EA%B2%BD%ED%91%9C%EC%A7%80%20%EC%9D%B8%EC%A6%9D%EC%84%9C%282024.10.21~2027.10.20%29.pdf",
-      "filename": "퍼펙트탄 환경표지 인증서(2024.10.21~2027.10.20).pdf"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EC%9A%B0%EB%A0%88%ED%83%84/document_485_20261013_090350.zip",
+      "filename": "document_485_20261013_090350.zip"
     }
   ],
   "드라이픽스Ⅰ- 50(개량점붙임)": [
@@ -2949,8 +2955,8 @@
     {
       "type": "인증서",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=485",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84%20%ED%99%98%EA%B2%BD%ED%91%9C%EC%A7%80%20%EC%9D%B8%EC%A6%9D%EC%84%9C%282024.10.21~2027.10.20%29.pdf",
-      "filename": "퍼펙트탄 환경표지 인증서(2024.10.21~2027.10.20).pdf"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%ED%8D%BC%ED%8E%99%ED%8A%B8%ED%83%84/document_485_20261013_090409.zip",
+      "filename": "document_485_20261013_090409.zip"
     }
   ],
   "자동수평 프라이머": [
