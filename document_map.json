@@ -293,8 +293,8 @@
     {
       "type": "MSDS",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=37",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%20II.pdf",
-      "filename": "드라이픽스 II.pdf"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A4%E2%85%A1/%EB%93%9C%EB%9D%BC%EC%9D%B4%ED%94%BD%EC%8A%A42.pdf",
+      "filename": "드라이픽스2.pdf"
     },
     {
       "type": "MSDS",
@@ -2719,8 +2719,8 @@
     {
       "type": "MSDS",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=480",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%8D%B0%EC%BD%94%20%EB%B3%B8%EB%93%9C%28%EC%B9%9C%ED%99%98%EA%B2%BD%29/%EC%B9%9C%ED%99%98%EA%B2%BD%20%EB%8D%B0%EC%BD%94%EB%B3%B8%EB%93%9C%28%EB%82%9C%EB%B0%A9%EC%9A%A9%29%202026.01.12.pdf",
-      "filename": "친환경 데코본드(난방용) 2026.01.12.pdf"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EB%8D%B0%EC%BD%94%20%EB%B3%B8%EB%93%9C%28%EC%B9%9C%ED%99%98%EA%B2%BD%29/%EC%B9%9C%ED%99%98%EA%B2%BD%20%EB%8D%B0%EC%BD%94%EB%B3%B8%EB%93%9C%28%EB%82%9C%EB%B0%A9%EC%9A%A9%29%20MSDS%2C%202026.09.21.pdf",
+      "filename": "친환경 데코본드(난방용) MSDS, 2026.09.21.pdf"
     },
     {
       "type": "시험성적서",
@@ -2911,6 +2911,14 @@
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=518",
       "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%97%90%ED%8F%AD%EC%8B%9C%ED%8D%BC%ED%8B%B0700/%EC%97%90%ED%8F%AD%EC%8B%9C%ED%8D%BC%ED%8B%B0700%28MSDS%29.pdf",
       "filename": "에폭시퍼티700(MSDS).pdf"
+    }
+  ],
+  "쌍곰 아스콘": [
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=527",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%95%84%EC%8A%A4%EC%BD%98/%EC%8C%8D%EA%B3%B0%20%EC%95%84%EC%8A%A4%EC%BD%98-%EA%B8%B0%EC%88%A0%2826.09.28%29.pdf",
+      "filename": "쌍곰 아스콘-기술(26.09.28).pdf"
     }
   ],
   "도배용 아크릴실란트 AS-903": [
