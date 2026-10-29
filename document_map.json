@@ -1793,14 +1793,20 @@
       "filename": "시험성적서 - 쌍곰씰 S-905 (2026).pdf"
     },
     {
-      "type": "인증서",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=333"
-    },
-    {
       "type": "성과대비표",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=427",
       "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%94%B0%20S-905S-905%20BioAS-903/%EC%84%B1%EA%B3%BC%EB%8C%80%EB%B9%84%ED%91%9C%20-%20%EC%8B%A4%EB%A6%AC%EC%BD%98%20S-905%20%282026%29.pdf",
       "filename": "성과대비표 - 실리콘 S-905 (2026).pdf"
+    },
+    {
+      "type": "인증서",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=531",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%94%B0%20S-905S-905%20BioAS-903/%28%EC%A3%BC%29%ED%83%91%ED%94%84%EB%9D%BC%20KS%EC%9D%B8%EC%A6%9D%EC%84%9C%28KS%20F%204910%29.pdf",
+      "filename": "(주)탑프라 KS인증서(KS F 4910).pdf"
+    },
+    {
+      "type": "인증서",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=333"
     }
   ],
   "쌍곰 폼": [
