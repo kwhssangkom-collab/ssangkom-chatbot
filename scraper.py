@@ -54,7 +54,10 @@ def parse_page(soup):
         if len(tds) < 4:
             continue
 
-        product_name = tds[1].get_text(strip=True)
+        # 제품명은 <span>만 읽는다 — td 전체를 읽으면 홈페이지가 PHP 8.4 전환 후 화면에 찍는
+        # 경고문("Warning: Undefined array key ...")이 제품명에 붙어 들어온다(2026-10-28 d=333).
+        name_el = tds[1].find("span")
+        product_name = (name_el or tds[1]).get_text(strip=True)
         doc_type = tds[2].get_text(strip=True)
 
         if not product_name:
