@@ -2959,6 +2959,20 @@
       "filename": "AS-903 MSDS, 2026.01.28.pdf"
     }
   ],
+  "쌍곰 제설제": [
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=532",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%A0%9C%EC%84%A4%EC%A0%9C/jeseolje_tech.pdf",
+      "filename": "jeseolje_tech.pdf"
+    },
+    {
+      "type": "MSDS",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=535",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%A0%9C%EC%84%A4%EC%A0%9C/jeseolje_msds.pdf",
+      "filename": "jeseolje_msds.pdf"
+    }
+  ],
   "퍼펙트탄": [
     {
       "type": "기술자료",
