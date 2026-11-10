@@ -2969,8 +2969,60 @@
     {
       "type": "MSDS",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=535",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%A0%9C%EC%84%A4%EC%A0%9C/jeseolje_msds.pdf",
-      "filename": "jeseolje_msds.pdf"
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%A0%9C%EC%84%A4%EC%A0%9C/%EC%8C%8D%EA%B3%B0%20%EC%A0%9C%EC%84%A4%EC%A0%9C%20MSDS%2026.11.09.pdf",
+      "filename": "쌍곰 제설제 MSDS 26.11.09.pdf"
+    }
+  ],
+  "세라멘트": [
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=536",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8%20%EA%B8%B0%EC%88%A0.pdf",
+      "filename": "세라멘트 기술.pdf"
+    },
+    {
+      "type": "MSDS",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=537",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8%20%2826.8.10.%29.pdf",
+      "filename": "세라멘트 (26.8.10.).pdf"
+    },
+    {
+      "type": "기타",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=538",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8/%EC%9E%91%EC%97%85%EA%B3%B5%EC%A0%95%EB%B3%84%20%EA%B4%80%EB%A6%AC%EC%9A%94%EB%A0%B9_%28%EC%A3%BC%29%EC%8C%8D%EA%B3%B0%20%20%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8.pdf",
+      "filename": "작업공정별 관리요령_(주)쌍곰  세라멘트.pdf"
+    },
+    {
+      "type": "성과대비표",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=541",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8/document_541_20261110_090452.zip",
+      "filename": "document_541_20261110_090452.zip"
+    },
+    {
+      "type": "인증서",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=548",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8%20SPS%20%EC%9D%B8%EC%A6%9D%EC%84%9C%2C%202026.10.31~2029.10.30.pdf",
+      "filename": "세라멘트 SPS 인증서, 2026.10.31~2029.10.30.pdf"
+    },
+    {
+      "type": "시험성적서",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=549",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8/%EC%84%B8%EB%9D%BC%EB%A9%98%ED%8A%B8%20%EA%B3%B5%EC%9D%B8%EA%B8%B0%EA%B4%80%EC%84%B1%EC%A0%81%EC%84%9C.pdf",
+      "filename": "세라멘트 공인기관성적서.pdf"
+    }
+  ],
+  "쌍곰 세척 건조 모래": [
+    {
+      "type": "MSDS",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=539",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%84%B8%EC%B2%99%20%EA%B1%B4%EC%A1%B0%20%EB%AA%A8%EB%9E%98/%EC%8C%8D%EA%B3%B0%20%EC%84%B8%EC%B2%99%20%EA%B1%B4%EC%A1%B0%EB%AA%A8%EB%9E%98%20MSDS.pdf",
+      "filename": "쌍곰 세척 건조모래 MSDS.pdf"
+    },
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=540",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EC%84%B8%EC%B2%99%20%EA%B1%B4%EC%A1%B0%20%EB%AA%A8%EB%9E%98/%EC%8C%8D%EA%B3%B0%EC%84%B8%EC%B2%99%EA%B1%B4%EC%A1%B0%EB%AA%A8%EB%9E%98%20-%EA%B8%B0%EC%88%A0%EC%9E%90%EB%A3%8C.pdf",
+      "filename": "쌍곰세척건조모래 -기술자료.pdf"
     }
   ],
   "쌍곰 미장몰 소포장": [
