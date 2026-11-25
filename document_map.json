@@ -3035,12 +3035,6 @@
   ],
   "쌍곰 미장몰 소포장": [
     {
-      "type": "기술자료",
-      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=201",
-      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EB%AF%B8%EC%9E%A5%EB%AA%B0%20%EC%86%8C%ED%8F%AC%EC%9E%A5/%EC%8C%8D%EA%B3%B0%EB%AF%B8%EC%9E%A5%EB%AA%B0%28%EA%B3%A0%EA%B8%89%EB%AF%B8%EC%9E%A5%EC%9A%A9%29-%EA%B8%B0%EC%88%A0.pdf",
-      "filename": "쌍곰미장몰(고급미장용)-기술.pdf"
-    },
-    {
       "type": "시험성적서",
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=298",
       "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EB%AF%B8%EC%9E%A5%EB%AA%B0%20%EC%86%8C%ED%8F%AC%EC%9E%A5/Q%EB%A7%88%ED%81%AC%20%EA%B2%80%EC%82%AC%20%EA%B2%B0%EA%B3%BC%EC%84%9C%20-%20%EC%8C%8D%EA%B3%B0%20%EB%AF%B8%EC%9E%A5%EB%AA%B0.pdf",
@@ -3063,6 +3057,18 @@
       "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=486",
       "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EB%AF%B8%EC%9E%A5%EB%AA%B0%20%EC%86%8C%ED%8F%AC%EC%9E%A5/%ED%92%88%EC%A7%88%EC%9D%B8%EC%A6%9D%28Q-Mark%29%20%EC%A7%80%EC%A0%95%EC%84%9C%2C%20%EA%B1%B4%EC%A1%B0%EC%8B%9C%EB%A9%98%ED%8A%B8%20%EB%AA%A8%EB%A5%B4%ED%83%80%EB%A5%B4%2C%202026.04.03~2027.04.02.pdf",
       "filename": "품질인증(Q-Mark) 지정서, 건조시멘트 모르타르, 2026.04.03~2027.04.02.pdf"
+    },
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=554",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EB%AF%B8%EC%9E%A5%EB%AA%B0%20%EC%86%8C%ED%8F%AC%EC%9E%A5/%EC%8C%8D%EA%B3%B0%EB%AF%B8%EC%9E%A5%EB%AA%B0%20%EC%86%8C%ED%8F%AC%EC%9E%A5%20%EA%B8%B0%EC%88%A0%EC%9E%90%EB%A3%8C.pdf",
+      "filename": "쌍곰미장몰 소포장 기술자료.pdf"
+    },
+    {
+      "type": "기술자료",
+      "url": "https://ssangkom.co.kr/description/download_dispatch.php?d=201",
+      "github_url": "https://raw.githubusercontent.com/kwhssangkom-collab/ssangkom-chatbot/master/product-docs/%EC%8C%8D%EA%B3%B0%20%EB%AF%B8%EC%9E%A5%EB%AA%B0%20%EC%86%8C%ED%8F%AC%EC%9E%A5/%EC%8C%8D%EA%B3%B0%EB%AF%B8%EC%9E%A5%EB%AA%B0%28%EA%B3%A0%EA%B8%89%EB%AF%B8%EC%9E%A5%EC%9A%A9%29-%EA%B8%B0%EC%88%A0.pdf",
+      "filename": "쌍곰미장몰(고급미장용)-기술.pdf"
     }
   ],
   "화이트픽스": [
